@@ -5,7 +5,12 @@ __lua__
 --main
 ground_y = 96
 scaffolding_y = 24
-rock_range = 8
+
+rock_push_force = 0.5
+rock_push_time = 15
+
+cat_push_range = 6
+cat_hpush_freeze = 5
 cat_vpush_freeze = 5
 
 function _init()
@@ -61,10 +66,21 @@ function cat_update(c)
     if(c.x > 124) c.x = 124
     if(c.x < 4) c.x = 4
 
+    -- hpush
+    if btnp(5) then
+        c.freeze = cat_hpush_freeze
+        rock = rocks_getclosest(c.x, cat_push_range)
+        if rock != nil then
+            local dir = 1
+            if (c.spr_flip) dir = -1
+            rock_push(rock, dir)
+        end
+    end
+
     -- vpush
     if btnp(4) then
         c.freeze = cat_vpush_freeze
-        rock = rocks_getclosest(c.x, rock_range)
+        rock = rocks_getclosest(c.x, cat_push_range)
         if rock != nil then
             rock_fall(rock)
         end
@@ -111,11 +127,14 @@ end
 -->8
 -- rock
 rocks_arr = {}
+rock_state_push = 1
+rock_state_fall = 2
+
 function rock_create(x, y)
     r = {
         x = x,
         y = y,
-        falling = false
+        state = 0
     }
 
     add(rocks_arr, r)
@@ -123,16 +142,29 @@ function rock_create(x, y)
 end
 
 function rock_update(r)
-    if r.falling then
+    if r.state == rock_state_fall then
         r.y += 1
         if r.y > ground_y then
             del(rocks_arr, r)
         end
+    elseif r.state == rock_state_push then
+        r.x += r.push_dir * rock_push_force
+        r.push_time -= 1
+        if (r.push_time <= 0) r.state = 0
     end
+
+    if(r.x > 124) r.x = 124
+    if(r.x < 4) r.x = 4
+end
+
+function rock_push(r, dir)
+    r.push_dir = dir
+    r.push_time = rock_push_time
+    r.state = rock_state_push
 end
 
 function rock_fall(r)
-    r.falling = true
+    r.state = rock_state_fall
 end
 
 function rock_draw(r)
