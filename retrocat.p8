@@ -8,20 +8,23 @@ scaffolding_y = 24
 
 rock_push_force = 0.5
 rock_push_time = 15
+rock_damage = 10
 
 cat_push_range = 6
 cat_hpush_freeze = 5
 cat_vpush_freeze = 5
 
+building_life_max = 100
+
 function _init()
  rock_create(20,24)
- building_init()
+ building = building_init()
  cat = cat_init()
  demolisher = demolisher_init()
 end
 
 function _update60()
- building_update()
+ building_update(building)
  cat_update(cat)
  demolisher_update(demolisher)
  foreach(rocks_arr, rock_update)
@@ -30,7 +33,7 @@ end
 function _draw()
  palt(0, false)
  bg_draw()
- bulding_draw()
+ bulding_draw(building)
  cat_draw(cat)
  demolisher_draw(demolisher)
  foreach(rocks_arr, rock_draw)
@@ -41,7 +44,7 @@ end
 function cat_init()
  return {
   x = 64,
-  y = 24,
+  y = scaffolding_y,
   spr_flip = false,
   freeze = -1
   }
@@ -88,23 +91,43 @@ end
 
 function cat_draw(c)
  palt(7, true)
- spr(1, c.x - 4, c.y - 8, 1, 1, c.spr_flip)
+ sspr(8,0,8,8,c.x-4,c.y-8,8,8,c.spr_flip)
+ --spr(1, c.x - 4, c.y - 8, 1, 1, c.spr_flip)
  palt(7, false)
 end
 
 -->8
 -- building
 function building_init()
+ return {
+  life = 100,  
+ }
 end
 
-function building_update()
+function collide_with_building(x,y)
+ return x >= 70 and x <= 110 and y >=50 and y <= 96
 end
 
-function bulding_draw()
+function building_hit(b, damage)
+ b.life -= damage
+end
+
+function building_update(b)
+end
+
+function bulding_draw(b)
  -- building
  rect(70,50,110,96,0)
+
  -- gauge
- rectfill(75,45,105,47,8)
+ local gauge_min = 75
+ local gauge_max = 105
+ rect(gauge_min-1,44,gauge_max+1,48,0)
+ if b.life > 0 then
+  local gauge_ratio = 1 - b.life / building_life_max
+  local gauge_val = gauge_min + flr(gauge_ratio * (gauge_max - gauge_min))
+  rectfill(gauge_val,45,105,47,8)
+ end
 end
 
 -->8
@@ -141,11 +164,21 @@ function rock_create(x, y)
 end
 
 function rock_update(r)
+ 
  if r.state == rock_state_fall then
   r.y += 1
-  if r.y > ground_y then
+
+  if collide_with_building(r.x, r.y) then
+   building_hit(building, rock_damage)
+   destroy = true
+  elseif r.y > ground_y then
+   destroy = true
+  end
+
+  if destroy then
    del(rocks_arr, r)
   end
+
  elseif r.state == rock_state_push then
   r.x += r.push_dir * rock_push_force
   r.push_time -= 1
