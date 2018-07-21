@@ -14,6 +14,9 @@ cat_push_range = 6
 cat_hpush_freeze = 5
 cat_vpush_freeze = 5
 
+bucket_push_force = 0.5
+bucket_push_time = 15
+
 building_life_max = 100
 
 function _init()
@@ -21,12 +24,14 @@ function _init()
  building = building_init()
  cat = cat_init()
  demolisher = demolisher_init()
+ bucket = bucket_init()
 end
 
 function _update60()
  building_update(building)
  cat_update(cat)
  demolisher_update(demolisher)
+ bucket_update(bucket)
  foreach(rocks_arr, rock_update)
 end
 
@@ -37,6 +42,7 @@ function _draw()
  bulding_draw(building)
  cat_draw(cat)
  demolisher_draw(demolisher)
+ bucket_draw(bucket)
  foreach(rocks_arr, rock_draw)
 end
 
@@ -80,11 +86,15 @@ function cat_update(c)
   if btnp(5) then
    cat_setanim(c, "push")
    c.freeze = cat_hpush_freeze
+
+   local push_dir = 1
+   if (c.spr_flip) push_dir = -1
+
    rock = rocks_getclosest(c.x, cat_push_range)
    if rock != nil then
-    local dir = 1
-    if (c.spr_flip) dir = -1
-    rock_push(rock, dir)
+    rock_push(rock, push_dir)
+   elseif is_cat_near_bucket() then
+    bucket_push(bucket, push_dir)
    end
   end
 
@@ -128,6 +138,10 @@ function cat_setanim(c, anim_name)
  if(anim_name == c.anim_name) return
  c.anim_name = anim_name
  c.anim_index = 1
+end
+
+function is_cat_near_bucket()
+ return abs(bucket.x - cat.x) <= cat_push_range
 end
 
 -->8
@@ -342,6 +356,41 @@ function rocks_getclosest(x,range)
 end
 
 -->8
+-- paint bucket
+bucket_state_push = 1
+bucket_state_shake = 2
+function bucket_init()
+ return {
+  x = 85,
+  state = 0,
+  push_time = 0,
+ }
+end
+
+function bucket_update(b)
+ -- state machine
+ if b.state == bucket_state_push then
+  b.x += b.push_dir * bucket_push_force
+  b.push_time += 1
+  if(b.push_time == bucket_push_time) b.state = 0
+ end
+
+end
+
+function bucket_draw(b)
+ spr(32, b.x-4, scaffolding_y-8, 1, 1)
+end
+
+function bucket_push(b, dir)
+ b.push_time = 0
+ b.push_dir = dir
+ b.state = bucket_state_push
+end
+
+function bucket_shake(b)
+end
+
+-->8
 -- background
 function bg_draw()
  rectfill(0,0,128,128,7)
@@ -371,11 +420,11 @@ bbbbbbbbbbbbbbbbbbbbbbbbbbb000000000000bbbbbbb1b11b1bbbbbbbbbb11bb1b1bbbbbbbbbbb
 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+0bbbbbb0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+b088880bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+b088880bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+b088880bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+b000000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
