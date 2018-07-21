@@ -104,14 +104,6 @@ function building_init()
  }
 end
 
-function collide_with_building(x,y)
- return x >= 70 and x <= 110 and y >=50 and y <= 96
-end
-
-function building_hit(b, damage)
- b.life -= damage
-end
-
 function building_update(b)
 end
 
@@ -130,20 +122,107 @@ function bulding_draw(b)
  end
 end
 
+function building_hit(b, damage)
+ b.life -= damage
+end
+
+function collide_with_building(x,y)
+ return x >= 70 and x <= 110 and y >=50 and y <= 96
+end
+
 -->8
 -- demolisher
+demolisher_state_idle = 1
+demolisher_state_move = 2
+demolisher_state_loading = 3
+demolisher_state_attack = 4
+demolisher_state_stun = 5
+
 function demolisher_init()
  return {
   x = 20,
-  y = 96,
+  y = ground_y,
+  cx = -8,
+  cy = -16,
+  cw = 16,
+  ch = 16,
+  state = demolisher_state_idle,
+  state_time = 0
  }
 end
 
 function demolisher_update(d)
+ local state = d.state
+ local state_time = d.state_time
+
+ state_time += 1
+ d.state_time = state_time
+
+ if state == demolisher_state_idle then
+  if(state_time >= 300) demolisher_move(d)
+ 
+ elseif state == demolisher_state_move then
+  d.x += 0.5
+  if(d.x >= 40) demolisher_loading(d)
+  if(state_time >= 30) demolisher_idle(d)
+ 
+ elseif state == demolisher_state_loading then
+  if(state_time >= 300) demolisher_attack(d)
+ 
+ elseif state == demolisher_state_attack then
+  if(state_time >= 180) demolisher_loading(d)
+
+ elseif state == demolisher_state_stun then
+  d.x -= 1
+  if(state_time >= 30) demolisher_idle(d)
+ end
+
 end
 
 function demolisher_draw(d)
  spr(3, d.x-8, d.y-16, 2, 2)
+
+ local cx_start = d.x + d.cx
+ local cx_end = cx_start + d.cw
+ local cy_start = d.y + d.cy
+ local cy_end = cy_start + d.ch
+ rect(cx_start, cy_start, cx_end, cy_end, 11)
+
+ print(d.state, 0, 0)
+end
+
+function demolisher_idle(d)
+ demolisher_setstate(d, demolisher_state_idle)
+end
+
+function demolisher_move(d)
+ demolisher_setstate(d, demolisher_state_move)
+end
+
+function demolisher_loading(d)
+ demolisher_setstate(d, demolisher_state_loading)
+end
+
+function demolisher_attack(d)
+ building_hit(building, 10)
+ demolisher_setstate(d, demolisher_state_attack)
+end
+
+function demolisher_stun(d)
+ demolisher_setstate(d, demolisher_state_stun)
+end
+
+function demolisher_setstate(d, state)
+ d.state = state
+ d.state_time = 0
+end
+
+function collide_with_demolisher(d,x,y)
+ local cx_start = d.x + d.cx
+ local cx_end = cx_start + d.cw
+ local cy_start = d.y + d.cy
+ local cy_end = cy_start + d.ch
+ return x >= cx_start and x <= cx_end and y >= cy_start and y <= cy_end
 end
 
 -->8
@@ -171,6 +250,9 @@ function rock_update(r)
   if collide_with_building(r.x, r.y) then
    building_hit(building, rock_damage)
    destroy = true
+  elseif collide_with_demolisher(demolisher, r.x, r.y) then
+   demolisher_stun(demolisher)
+   destroy = true
   elseif r.y > ground_y then
    destroy = true
   end
@@ -181,8 +263,8 @@ function rock_update(r)
 
  elseif r.state == rock_state_push then
   r.x += r.push_dir * rock_push_force
-  r.push_time -= 1
-  if (r.push_time <= 0) r.state = 0
+  r.push_time += 1
+  if (r.push_time >= rock_push_time) r.state = 0
  end
 
  if(r.x > 124) r.x = 124
@@ -191,7 +273,7 @@ end
 
 function rock_push(r, dir)
  r.push_dir = dir
- r.push_time = rock_push_time
+ r.push_time = 0
  r.state = rock_state_push
 end
 
