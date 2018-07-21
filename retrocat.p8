@@ -22,10 +22,10 @@ bucket_refill_position = 115
 
 building_life_max = 100
 
-paint_surface_bonus = 0.025
+paint_surface_bonus = 0.02
 
 function _init()
- rock_create(20,scaffolding_y)
+ --rock_create(20,scaffolding_y)
  building = building_init()
  cat = cat_init()
  demolisher = demolisher_init()
@@ -529,6 +529,9 @@ function paintbullet_update(p)
  if collide_with_building(p.x, p.y) then
   building_paint(building, paint_surface_bonus)
   paintbullet_destroy(p)
+ elseif collide_with_demolisher(demolisher, p.x, p.y) then
+  demolisher_stun(demolisher)
+  paintbullet_destroy(p)
  elseif p.y >= ground_y then
   paintbullet_destroy(p)
  end
@@ -573,7 +576,6 @@ end
 
 function painttap_draw(p)
  if p.opened then
-  print("opened",0,0)
   rectfill(p.x-15, p.y+15, p.x-13, p.y+23, 8)
  else
   print("not opened",0,0)
