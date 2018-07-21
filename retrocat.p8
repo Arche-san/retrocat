@@ -87,7 +87,7 @@ function cat_update(c)
     rock_push(rock, dir)
    end
   end
-  
+
   -- vpush
   if btnp(4) then
    cat_setanim(c, "push")
@@ -186,6 +186,7 @@ function demolisher_init()
 end
 
 function demolisher_update(d)
+ --state machine
  local state = d.state
  local state_time = d.state_time
 
@@ -208,7 +209,12 @@ function demolisher_update(d)
 
  elseif state == demolisher_state_stun then
   d.x -= 1
-  if(state_time >= 30) demolisher_idle(d)
+  if d.x < 10 then
+   d.x = 10
+   demolisher_idle(d)
+  elseif state_time >= 30 then
+   demolisher_idle(d)
+  end
  end
 
 end
