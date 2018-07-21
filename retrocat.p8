@@ -634,8 +634,6 @@ end
 function painttap_draw(p)
  if p.opened then
   rectfill(p.x-15, p.y+15, p.x-13, p.y+23, 8)
- else
-  print("not opened",0,0)
  end
 
  spr(46, p.x-16, p.y, 2, 2)
