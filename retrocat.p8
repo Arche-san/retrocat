@@ -42,84 +42,91 @@ end
 
 -->8
 -- cat
-cat_anim_idle = {5}
-cat_anim_walk = {7,9,11,13}
 function cat_init()
  return {
   x = 64,
   y = scaffolding_y,
   spr_flip = false,
   freeze = -1,
-  anim = nil,
-  anim_index,
-  anim_frame = 0
+  anims = {
+   idle = {5},
+   walk = {7,9,11,13},
+   push = {5},
+  },
+  anim_name = "idle",
+  anim_index = 1,
+  anim_frame = 0,
  }
 end
 
 function cat_update(c)
  if c.freeze > 0 then
 		c.freeze -= 1
-  return
+ else
+  -- move
+  if btn(1) then
+   c.x += 0.5
+   c.spr_flip = false
+   cat_setanim(c, "walk")
+  elseif btn(0) then
+   c.x -= 0.5
+   c.spr_flip = true
+   cat_setanim(c, "walk")
+  else 
+   cat_setanim(c, "idle")
+  end
+
+  -- hpush
+  if btnp(5) then
+   cat_setanim(c, "push")
+   c.freeze = cat_hpush_freeze
+   rock = rocks_getclosest(c.x, cat_push_range)
+   if rock != nil then
+    local dir = 1
+    if (c.spr_flip) dir = -1
+    rock_push(rock, dir)
+   end
+  end
+  
+  -- vpush
+  if btnp(4) then
+   cat_setanim(c, "push")
+   c.freeze = cat_vpush_freeze
+   rock = rocks_getclosest(c.x, cat_push_range)
+   if rock != nil then
+    rock_fall(rock)
+   end
+  end
  end
 
- if btn(1) then
-  c.x += 0.5
-  c.spr_flip = false
-  cat_setanim(c, cat_anim_walk)
- elseif btn(0) then
-  c.x -= 0.5
-  c.spr_flip = true
-  cat_setanim(c, cat_anim_walk)
- else 
-  cat_setanim(c, cat_anim_idle)
- end
-
- -- move bounds
+ -- bounds
  if(c.x > 124) c.x = 124
  if(c.x < 4) c.x = 4
 
- -- hpush
- if btnp(5) then
-  c.freeze = cat_hpush_freeze
-  rock = rocks_getclosest(c.x, cat_push_range)
-  if rock != nil then
-   local dir = 1
-   if (c.spr_flip) dir = -1
-   rock_push(rock, dir)
-  end
- end
-
- -- vpush
- if btnp(4) then
-  c.freeze = cat_vpush_freeze
-  rock = rocks_getclosest(c.x, cat_push_range)
-  if rock != nil then
-   rock_fall(rock)
-  end
- end
-end
-
-function cat_draw(c)
- -- update anim
+  -- anim
+ local anim = c.anims[c.anim_name]
  local anim_frame = c.anim_frame
  local anim_index = c.anim_index
  anim_frame += 1
  if anim_frame >= 8 then
   anim_frame = 0
   anim_index += 1
-  if anim_index > #c.anim then
+  if anim_index > #anim then
    anim_index = 1
   end
  end
  c.anim_index = anim_index
  c.anim_frame = anim_frame
- 
- spr(c.anim[anim_index], c.x - 8, c.y - 16, 2, 2, c.spr_flip)
 end
 
-function cat_setanim(c, anim)
- if(anim == c.anim) return
- c.anim = anim
+function cat_draw(c)
+ local anim = c.anims[c.anim_name]
+ spr(anim[c.anim_index], c.x - 8, c.y - 16, 2, 2, c.spr_flip)
+end
+
+function cat_setanim(c, anim_name)
+ if(anim_name == c.anim_name) return
+ c.anim_name = anim_name
  c.anim_index = 1
 end
 
