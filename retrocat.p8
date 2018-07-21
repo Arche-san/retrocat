@@ -27,6 +27,8 @@ building_life_max = 100
 
 paint_surface_bonus = 0.02
 
+particles = {}
+
 function _init()
  --rock_create(20,scaffolding_y)
  building = building_init()
@@ -36,6 +38,7 @@ function _init()
  painttap = painttap_init();
 end
 
+local key = false
 function _update60()
  building_update(building)
  cat_update(cat)
@@ -57,8 +60,10 @@ function _draw()
  bucket_draw(bucket)
  foreach(paintbullets_arr, paintbullet_draw)
  foreach(rocks_arr, rock_draw)
+ foreach(particles, draw_particle)
  print("cpu=".. stat(1), 0, 112)
- print("mem=".. stat(0), 0, 120)
+ --print("mem=".. stat(0), 0, 120)
+ print("nb part="..#particles, 0, 120)
 end
 
 -->8
@@ -534,8 +539,9 @@ function paintbullet_create(x)
 end
 
 function paintbullet_update(p)
- p.y += 1
+ p.y += 1.5
  if collide_with_building(p.x, p.y) then
+  add_splash(p.x,p.y)
   building_paint(building, paint_surface_bonus)
   paintbullet_destroy(p)
  elseif collide_with_demolisher(demolisher, p.x, p.y) then
@@ -604,6 +610,48 @@ function painttap_close(p)
  p.opened = false
 end
 
+function add_particle(x,y,vx,vy,r,c,g,gr,f)
+ local part = {}
+ part.x = x
+ part.y = y
+ part.vx = vx
+ part.vy = vy
+ part.col = c
+ part.radius = r
+ part.gravity = g
+ part.ground = gr
+ part.frame = f
+ if(f == nil) part.frame = 60
+ add(particles, part)
+end
+
+function add_splash(x,y)
+ local nb = rnd(3)+5
+ for i=1,nb do
+  add_particle(x,y,
+   rnd(1)-0.5,
+   rnd(1)-3,
+   rnd(1)+3,8,0.2,
+   108,50)
+ end
+end
+
+function draw_particle(p)
+ circfill(p.x,p.y,p.radius,p.col)
+ p.x += p.vx
+ p.y += p.vy
+ if(p.ground != nil and
+    p.y+p.radius > p.ground) then
+  p.y = p.ground - p.radius
+ end
+ if(p.gravity != nil and
+    p.vy < 2) then
+  p.vy += p.gravity
+ end
+ p.radius = p.radius / 1.025
+ p.frame -= 1
+ if(p.frame <= 0) del(particles,p)
+end
 -->8
 -- background
 function bg_draw()
