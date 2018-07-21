@@ -296,11 +296,15 @@ function demolisher_init()
   cw = 40,
   ch = 32,
   state = demolisher_state_idle,
-  state_time = 0
+  state_time = 0,
+  spr_shake_time = 0
  }
 end
 
 function demolisher_update(d)
+ -- sprite shake
+ d.spr_shake_time += 1
+
  --state machine
  local state = d.state
  local state_time = d.state_time
@@ -338,15 +342,21 @@ function demolisher_update(d)
 end
 
 function demolisher_draw(d)
- spr(192, d.x-16, d.y-32, 6, 4)
+ local spr_y = d.y -32
+ spr_y += cos(flr(d.spr_shake_time / 8) / 2) / 2
+ sspr(0, 96, 48, 21, d.x-16, spr_y)
+ sspr(0, 117, 48, 1, d.x-16, d.y-12)
+ sspr(0, 117, 48, 11, d.x-16, d.y-11)
+ --spr(240, d.x-16, d.y -8, 6, 1)
+ --spr(192, d.x-16, spr_y, 6, 3)
 
- local cx_start = d.x + d.cx
- local cx_end = cx_start + d.cw
- local cy_start = d.y + d.cy
- local cy_end = cy_start + d.ch
- rect(cx_start, cy_start, cx_end, cy_end, 11)
+ -- local cx_start = d.x + d.cx
+ -- local cx_end = cx_start + d.cw
+ -- local cy_start = d.y + d.cy
+ -- local cy_end = cy_start + d.ch
+ -- rect(cx_start, cy_start, cx_end, cy_end, 11)
 
- print(d.state, 0, 0)
+ --print(d.state, 0, 0)
 end
 
 function demolisher_idle(d)
