@@ -66,7 +66,8 @@ function cat_init()
   anim_name = "idle",
   anim_index = 1,
   anim_frame = 0,
-  push_type = 0
+  push_type = 0,
+  push_countdown = 1
  }
 end
 
@@ -90,31 +91,24 @@ function cat_update(c)
   if btnp(5) then
    cat_setanim(c, "push")
    c.push_type = 1
+   c.push_countdown = 16
    c.freeze = cat_hpush_freeze
-
-   local push_dir = 1
-   if (c.spr_flip) push_dir = -1
-
-   rock = rocks_getclosest(c.x, cat_push_range)
-   if rock != nil then
-    rock_push(rock, push_dir)
-   elseif is_cat_near_bucket() then
-    bucket_push(bucket, push_dir)
-   end
   end
 
   -- vpush
   if btnp(4) then
    cat_setanim(c, "push")
    c.push_type = 2
+   c.push_countdown = 16
    c.freeze = cat_vpush_freeze
+  end
+ end
 
-   rock = rocks_getclosest(c.x, cat_push_range)
-   if rock != nil then
-    rock_fall(rock)
-   elseif is_cat_near_bucket() then
-    bucket_shake(bucket)
-   end
+ -- push delay
+ if c.push_countdown > 0 then
+  c.push_countdown -= 1
+  if c.push_countdown <= 0 then
+   cat_applypush(c)
   end
  end
 
@@ -136,6 +130,27 @@ function cat_update(c)
  end
  c.anim_index = anim_index
  c.anim_frame = anim_frame
+end
+
+function cat_applypush(c)
+ if c.push_type == 1 then
+  local push_dir = 1
+  if (c.spr_flip) push_dir = -1
+  
+  local rock = rocks_getclosest(c.x, cat_push_range)
+  if rock != nil then
+   rock_push(rock, push_dir)
+  elseif is_cat_near_bucket() then
+   bucket_push(bucket, push_dir)
+  end
+ elseif c.push_type == 2 then
+  local rock = rocks_getclosest(c.x, cat_push_range)
+  if rock != nil then
+   rock_fall(rock)
+  elseif is_cat_near_bucket() then
+   bucket_shake(bucket)
+  end
+ end
 end
 
 function cat_draw(c)
