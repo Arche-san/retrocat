@@ -14,11 +14,14 @@ cat_push_range = 10
 cat_hpush_freeze = 32
 cat_vpush_freeze = 32
 
-bucket_push_force = 0.5
+bucket_push_force = 1.5
 bucket_push_time = 15
 bucket_shake_time = 15
 bucket_paint_capacity_max = 10
 bucket_refill_position = 115
+
+demolisher_xmin = -10
+demolisher_xmax = 30
 
 building_life_max = 100
 
@@ -302,7 +305,10 @@ function demolisher_update(d)
  
  elseif state == demolisher_state_move then
   d.x += 0.5
-  if(d.x >= 30) demolisher_loading(d)
+  if d.x >= demolisher_xmax then
+   d.x = demolisher_xmax
+   demolisher_loading(d)
+  end
   if(state_time >= 30) demolisher_idle(d)
  
  elseif state == demolisher_state_loading then
@@ -313,14 +319,14 @@ function demolisher_update(d)
 
  elseif state == demolisher_state_stun then
   d.x -= 0.5
-  if d.x < 0 then
-   d.x = 0
-   demolisher_idle(d)
-  elseif state_time >= 30 then
+  if state_time >= 30 then
    demolisher_idle(d)
   end
  end
 
+ if d.x < demolisher_xmin then
+  d.x = demolisher_xmin
+ end
 end
 
 function demolisher_draw(d)
