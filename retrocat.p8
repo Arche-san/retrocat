@@ -4,7 +4,7 @@ __lua__
 
 --main
 ground_y = 108
-scaffolding_y = 24
+scaffolding_y = 30
 
 rock_push_force = 0.5
 rock_push_time = 15
@@ -17,18 +17,20 @@ cat_vpush_freeze = 32
 bucket_push_force = 0.5
 bucket_push_time = 15
 bucket_shake_time = 15
-bucket_paint_capacity_max = 100
+bucket_paint_capacity_max = 10
+bucket_refill_position = 115
 
 building_life_max = 100
 
 paint_surface_bonus = 0.025
 
 function _init()
- rock_create(20,24)
+ rock_create(20,scaffolding_y)
  building = building_init()
  cat = cat_init()
  demolisher = demolisher_init()
  bucket = bucket_init()
+ painttap = painttap_init();
 end
 
 function _update60()
@@ -36,6 +38,7 @@ function _update60()
  cat_update(cat)
  demolisher_update(demolisher)
  bucket_update(bucket)
+ painttap_update(painttap)
  foreach(paintbullets_arr, paintbullet_update)
  foreach(rocks_arr, rock_update)
 end
@@ -47,6 +50,7 @@ function _draw()
  building_draw(building)
  cat_draw(cat)
  demolisher_draw(demolisher)
+ painttap_draw(painttap)
  bucket_draw(bucket)
  foreach(paintbullets_arr, paintbullet_draw)
  foreach(rocks_arr, rock_draw)
@@ -442,6 +446,7 @@ function rocks_getclosest(x,range)
 end
 
 -->8
+-- paint elements
 -- bucket
 bucket_state_push = 1
 bucket_state_shake = 2
@@ -466,7 +471,7 @@ function bucket_update(b)
   if(b.state_time >= bucket_shake_time) b.state = 0
  end
 
- if(b.x > 108) b.x = 108
+ if(b.x > bucket_refill_position) b.x = bucket_refill_position
  if(b.x < 20) b.x = 20
 end
 
@@ -498,11 +503,15 @@ function bucket_shake(b)
  b.state_time = 0
 end
 
-function bucket_refill(b)
- b.paint_capacity = bucket_paint_capacity_max
+function bucket_refill(b, value)
+ b.paint_capacity += value
+ b.paint_capacity = min(b.paint_capacity, bucket_paint_capacity_max)
 end
 
--->8
+function is_bucket_in_refill_position()
+ return bucket.x >= bucket_refill_position
+end
+
 -- paint bullet
 paintbullets_arr = {}
 
@@ -531,6 +540,57 @@ end
 
 function paintbullet_destroy(p)
  del(paintbullets_arr, p)
+end
+
+-- paint tap
+function painttap_init()
+ return {
+  x = 128,
+  y = -3,
+  opened = false,
+  refill_timer = 0
+ }
+end
+
+function painttap_update(p)
+ if is_bucket_in_refill_position() then
+  painttap_open(p)
+ else
+  painttap_close(p)
+ end
+
+ if p.opened then
+  p.refill_timer -= 1
+  if p.refill_timer <= 0 then
+   if is_bucket_in_refill_position() then
+    bucket_refill(bucket, 1)
+   end
+   p.refill_timer = 60
+  end
+ end
+
+end
+
+function painttap_draw(p)
+ if p.opened then
+  print("opened",0,0)
+  rectfill(p.x-15, p.y+15, p.x-13, p.y+23, 8)
+ else
+  print("not opened",0,0)
+ end
+
+ spr(46, p.x-16, p.y, 2, 2)
+end
+
+function painttap_open(p)
+ if(p.opened) return;
+ p.opened = true
+ p.refill_timer = 60
+end
+
+function painttap_close(p)
+ if(not p.opened) return;
+ p.opened = false
 end
 
 -->8
