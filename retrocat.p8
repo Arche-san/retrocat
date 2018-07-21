@@ -20,8 +20,8 @@ bucket_shake_time = 15
 bucket_paint_capacity_max = 10
 bucket_refill_position = 115
 
-demolisher_xmin = -10
-demolisher_xmax = 30
+demolisher_xmin = -20
+demolisher_xmax = 20
 
 building_life_max = 100
 
@@ -293,17 +293,31 @@ function demolisher_init()
   y = ground_y,
   cx = -16,
   cy = -32,
-  cw = 40,
+  cw = 65,
   ch = 32,
   state = demolisher_state_idle,
   state_time = 0,
-  spr_shake_time = 0
+  spr_shake_time = 0,
+  swing = false,
+  swing_time = 0,
+  swing_force = 0
  }
 end
 
 function demolisher_update(d)
- -- sprite shake
+ --sprite shake
  d.spr_shake_time += 1
+
+ d.swing_time += 1
+ if d.swing then
+  d.swing_force += 0.05
+ else
+  if d.swing_force >= 0 then
+   d.swing_force -= 0.1
+  else
+   d.swing_force = 0
+  end
+ end
 
  --state machine
  local state = d.state
@@ -327,7 +341,7 @@ function demolisher_update(d)
   if(state_time >= 300) demolisher_attack(d)
  
  elseif state == demolisher_state_attack then
-  if(state_time >= 180) demolisher_loading(d)
+  if(state_time >= 60) demolisher_idle(d)
 
  elseif state == demolisher_state_stun then
   d.x -= 0.5
@@ -342,13 +356,26 @@ function demolisher_update(d)
 end
 
 function demolisher_draw(d)
- local spr_y = d.y -32
- spr_y += cos(flr(d.spr_shake_time / 8) / 2) / 2
+ local shake_offset = cos(flr(d.spr_shake_time / 8) / 2) / 2
+ -- base
+ local spr_y = d.y -32 + shake_offset
  sspr(0, 96, 48, 21, d.x-16, spr_y)
  sspr(0, 117, 48, 1, d.x-16, d.y-12)
  sspr(0, 117, 48, 11, d.x-16, d.y-11)
- --spr(240, d.x-16, d.y -8, 6, 1)
- --spr(192, d.x-16, spr_y, 6, 3)
+
+ -- cannon ball
+ local ball_x = d.x + 43
+ local ball_y = d.y - 28 + shake_offset
+ if d.swing_force > 0 then
+  ball_x += cos(d.swing_time / 60) * d.swing_force
+  ball_y += sin(d.swing_time / 60) /3 * d.swing_force
+ end
+ sspr(18, 0, 16, 16, ball_x-7, ball_y)
+
+ -- cannon line
+ local ball_line_x = d.x + 43
+ local ball_line_y = d.y - 50 + shake_offset
+ line(ball_line_x, ball_line_y, ball_x, ball_y, 0)
 
  -- local cx_start = d.x + d.cx
  -- local cx_end = cx_start + d.cw
@@ -360,23 +387,28 @@ function demolisher_draw(d)
 end
 
 function demolisher_idle(d)
+ d.swing = false
  demolisher_setstate(d, demolisher_state_idle)
 end
 
 function demolisher_move(d)
+ d.swing = false
  demolisher_setstate(d, demolisher_state_move)
 end
 
 function demolisher_loading(d)
+ d.swing = true
  demolisher_setstate(d, demolisher_state_loading)
 end
 
 function demolisher_attack(d)
+ d.swing = true
  building_hit(building, 10)
  demolisher_setstate(d, demolisher_state_attack)
 end
 
 function demolisher_stun(d)
+ d.swing = false
  demolisher_setstate(d, demolisher_state_stun)
 end
 
