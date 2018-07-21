@@ -16,6 +16,8 @@ cat_vpush_freeze = 5
 
 bucket_push_force = 0.5
 bucket_push_time = 15
+bucket_shake_time = 15
+bucket_paint_capacity_max = 3
 
 building_life_max = 100
 
@@ -32,6 +34,7 @@ function _update60()
  cat_update(cat)
  demolisher_update(demolisher)
  bucket_update(bucket)
+ foreach(paintbullets_arr, paintbullet_update)
  foreach(rocks_arr, rock_update)
 end
 
@@ -43,6 +46,7 @@ function _draw()
  cat_draw(cat)
  demolisher_draw(demolisher)
  bucket_draw(bucket)
+ foreach(paintbullets_arr, paintbullet_draw)
  foreach(rocks_arr, rock_draw)
 end
 
@@ -102,9 +106,12 @@ function cat_update(c)
   if btnp(4) then
    cat_setanim(c, "push")
    c.freeze = cat_vpush_freeze
+
    rock = rocks_getclosest(c.x, cat_push_range)
    if rock != nil then
     rock_fall(rock)
+   elseif is_cat_near_bucket() then
+    bucket_shake(bucket)
    end
   end
  end
@@ -356,38 +363,93 @@ function rocks_getclosest(x,range)
 end
 
 -->8
--- paint bucket
+-- bucket
 bucket_state_push = 1
 bucket_state_shake = 2
 function bucket_init()
  return {
   x = 85,
   state = 0,
-  push_time = 0,
+  state_time = 0,
+  paint_capacity = bucket_paint_capacity_max
  }
 end
 
 function bucket_update(b)
  -- state machine
- if b.state == bucket_state_push then
+ local state = b.state
+ b.state_time += 1
+
+ if state == bucket_state_push then
   b.x += b.push_dir * bucket_push_force
-  b.push_time += 1
-  if(b.push_time == bucket_push_time) b.state = 0
+  if(b.state_time >= bucket_push_time) b.state = 0
+ elseif state == bucket_state_push then
+  if(b.state_time >= bucket_shake_time) b.state = 0
  end
 
+ if(b.x > 124) b.x = 124
+ if(b.x < 4) b.x = 4
 end
 
 function bucket_draw(b)
  spr(32, b.x-4, scaffolding_y-8, 1, 1)
+
+ if b.paint_capacity > 0 then
+  local ymin = scaffolding_y - 4
+  local ymax = scaffolding_y - 2
+  local ratio = 1 - b.paint_capacity / bucket_paint_capacity_max
+  local y = ymin + flr((ymax - ymin) * ratio)
+  rectfill(b.x-2, y, b.x+1, ymax, 8)
+ end
+
 end
 
 function bucket_push(b, dir)
- b.push_time = 0
  b.push_dir = dir
  b.state = bucket_state_push
+ b.state_time = 0
 end
 
 function bucket_shake(b)
+ if b.paint_capacity > 0 then
+  b.paint_capacity -= 1
+  paintbullet_create(b.x)
+ end
+
+ b.state = bucket_state_shake
+ b.state_time = 0
+end
+
+function bucket_refill(b)
+ b.paint_capacity = bucket_paint_capacity_max
+end
+
+-->8
+-- paint bullet
+paintbullets_arr = {}
+
+function paintbullet_create(x)
+ p = {
+  x = x,
+  y = scaffolding_y
+ }
+ add(paintbullets_arr, p)
+ return p
+end
+
+function paintbullet_update(p)
+ p.y += 1
+ if p.y >= ground_y then
+  paintbullet_destroy(p)
+ end
+end
+
+function paintbullet_draw(p)
+ circfill(p.x,p.y,2,8)
+end
+
+function paintbullet_destroy(p)
+ del(paintbullets_arr, p)
 end
 
 -->8
@@ -421,9 +483,9 @@ bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 0bbbbbb0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-b088880bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-b088880bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-b088880bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+b0bbbb0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+b0bbbb0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+b0bbbb0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 b000000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
