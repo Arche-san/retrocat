@@ -314,11 +314,11 @@ function building_draw(b)
  end
 
  --collisions debug
- local cx_start = b.x + b.cx
- local cx_end = cx_start + b.cw
- local cy_start = ground_y - b.ch
- local cy_end = ground_y
- rect(cx_start, cy_start, cx_end, cy_end, 11)
+ -- local cx_start = b.x + b.cx
+ -- local cx_end = cx_start + b.cw
+ -- local cy_start = ground_y - b.ch
+ -- local cy_end = ground_y
+ -- rect(cx_start, cy_start, cx_end, cy_end, 11)
 
 end
 
