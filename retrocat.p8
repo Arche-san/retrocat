@@ -22,6 +22,7 @@ bucket_refill_position = 115
 
 demolisher_xmin = -20
 demolisher_xmax = 20
+demolisher_ball_damage = 10
 
 building_life_max = 100
 
@@ -195,6 +196,9 @@ end
 function building_init()
  return {
   x = 70,
+  cx = 10,
+  cw = 40,
+  ch = 40,
   spr_x = 0,
   spr_y = 32,
   spr_w = 57,
@@ -227,6 +231,14 @@ function building_draw(b)
   local gauge_val = gauge_min + flr(gauge_ratio * (gauge_max - gauge_min))
   rectfill(gauge_val,37,gauge_max,39,8)
  end
+
+ --collisions debug
+ -- local cx_start = b.x + b.cx
+ -- local cx_end = cx_start + b.cw
+ -- local cy_start = ground_y - b.ch
+ -- local cy_end = ground_y
+ -- rect(cx_start, cy_start, cx_end, cy_end, 11)
+
 end
 
 function building_hit(b, damage)
@@ -239,7 +251,12 @@ function building_paint(b, surface)
 end
 
 function collide_with_building(x,y)
- return x >= 70 and x <= 110 and y >=50 and y <= 96
+ local b = building
+ local cx_start = b.x + b.cx
+ local cx_end = cx_start + b.cw
+ local cy_start = ground_y - b.ch
+ local cy_end = ground_y
+ return x >= cx_start and x <= cx_end and y >= cy_start and y <= cy_end
 end
 
 --draw building in both states
@@ -283,9 +300,8 @@ end
 -- demolisher
 demolisher_state_idle = 1
 demolisher_state_move = 2
-demolisher_state_loading = 3
-demolisher_state_attack = 4
-demolisher_state_stun = 5
+demolisher_state_attack = 3
+demolisher_state_stun = 4
 
 function demolisher_init()
  return {
@@ -298,16 +314,21 @@ function demolisher_init()
   state = demolisher_state_idle,
   state_time = 0,
   spr_shake_time = 0,
+  shake_offset = 0,
   swing = false,
   swing_time = 0,
-  swing_force = 0
+  swing_force = 0,
+  ball_x = 0,
+  ball_y = 0,
  }
 end
 
 function demolisher_update(d)
  --sprite shake
  d.spr_shake_time += 1
+ d.shake_offset = cos(flr(d.spr_shake_time / 8) / 2) / 2
 
+ --swing
  d.swing_time += 1
  if d.swing then
   d.swing_force += 0.05
@@ -317,6 +338,14 @@ function demolisher_update(d)
   else
    d.swing_force = 0
   end
+ end
+
+ --ball pos
+ d.ball_x = d.x + 43
+ d.ball_y = d.y - 20 + d.shake_offset
+ if d.swing_force > 0 then
+  d.ball_x += cos(d.swing_time / 60) * d.swing_force
+  d.ball_y += sin(d.swing_time / 60) /3 * d.swing_force
  end
 
  --state machine
@@ -333,7 +362,7 @@ function demolisher_update(d)
   d.x += 0.5
   if d.x >= demolisher_xmax then
    d.x = demolisher_xmax
-   demolisher_loading(d)
+   demolisher_attack(d)
   end
   if(state_time >= 30) demolisher_idle(d)
  
@@ -341,7 +370,10 @@ function demolisher_update(d)
   if(state_time >= 300) demolisher_attack(d)
  
  elseif state == demolisher_state_attack then
-  if(state_time >= 60) demolisher_idle(d)
+  if(collide_with_building(d.ball_x, d.ball_y)) then
+   building_hit(building, demolisher_ball_damage)
+   demolisher_idle(d)
+  end
 
  elseif state == demolisher_state_stun then
   d.x -= 0.5
@@ -356,26 +388,21 @@ function demolisher_update(d)
 end
 
 function demolisher_draw(d)
- local shake_offset = cos(flr(d.spr_shake_time / 8) / 2) / 2
  -- base
- local spr_y = d.y -32 + shake_offset
+ local spr_y = d.y -32 + d.shake_offset
  sspr(0, 96, 48, 21, d.x-16, spr_y)
  sspr(0, 117, 48, 1, d.x-16, d.y-12)
  sspr(0, 117, 48, 11, d.x-16, d.y-11)
 
- -- cannon ball
- local ball_x = d.x + 43
- local ball_y = d.y - 28 + shake_offset
- if d.swing_force > 0 then
-  ball_x += cos(d.swing_time / 60) * d.swing_force
-  ball_y += sin(d.swing_time / 60) /3 * d.swing_force
- end
- sspr(18, 0, 16, 16, ball_x-7, ball_y)
 
  -- cannon line
  local ball_line_x = d.x + 43
- local ball_line_y = d.y - 50 + shake_offset
- line(ball_line_x, ball_line_y, ball_x, ball_y, 0)
+ local ball_line_y = d.y - 50 + d.shake_offset
+ line(ball_line_x, ball_line_y, d.ball_x, d.ball_y, 0)
+
+  -- cannon ball
+ sspr(18, 0, 16, 16, d.ball_x-7, d.ball_y-8)
+ --circ(d.ball_x, d.ball_y, 1, 11)
 
  -- local cx_start = d.x + d.cx
  -- local cx_end = cx_start + d.cw
@@ -396,14 +423,8 @@ function demolisher_move(d)
  demolisher_setstate(d, demolisher_state_move)
 end
 
-function demolisher_loading(d)
- d.swing = true
- demolisher_setstate(d, demolisher_state_loading)
-end
-
 function demolisher_attack(d)
  d.swing = true
- building_hit(building, 10)
  demolisher_setstate(d, demolisher_state_attack)
 end
 
