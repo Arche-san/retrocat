@@ -844,9 +844,15 @@ end
 function bg_draw()
  rectfill(0,0,128,128,7)
  --ground
- bg_road(108)
+ bg_road(ground_y)
  --scaffolding
- rectfill(0, scaffolding_y, 128, scaffolding_y+1, 0)
+ bg_scaffolding(scaffolding_y)
+end
+
+function bg_scaffolding(y)
+ for i=0,16 do
+  sspr(88,16,8,5,i*8,y)
+ end
 end
 
 function bg_road(y)
