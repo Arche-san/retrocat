@@ -13,13 +13,13 @@ rock_push_time = 15
 rock_damage = 10
 
 cat_move_speed = 0.65
-cat_charge_full_duration = 30
+cat_charge_full_duration = 15
 cat_push_range = 10
-cat_hpush_freeze = 24
-cat_vpush_freeze = 24
+cat_hpush_freeze = 12
+cat_vpush_freeze = 12
 
-bucket_push_force_min = 1
-bucket_push_force_max = 3
+bucket_push_force_min = 1.5
+bucket_push_force_max = 2.5
 bucket_push_time = 15
 bucket_shake_time = 15
 bucket_shake_nbbullets_min = 1
@@ -192,7 +192,7 @@ function cat_update(c)
    if c.charge_type == 1 and not btn(5) then
     cat_setanim(c, "push_release")
     c.push_type = 1
-    c.push_countdown = 16
+    c.push_countdown = 8
     c.freeze = cat_hpush_freeze   
     c.charging = false
    end
@@ -200,7 +200,7 @@ function cat_update(c)
    if c.charge_type == 2 and not btn(4) then
     cat_setanim(c, "push_release")
     c.push_type = 2
-    c.push_countdown = 16
+    c.push_countdown = 8
     c.freeze = cat_vpush_freeze
     c.charging = false
    end
@@ -247,8 +247,10 @@ function cat_update(c)
  local anim = c.anims[c.anim_name]
  local anim_frame = c.anim_frame
  local anim_index = c.anim_index
+ local anim_speed = 8
+ if(c.anim_name == "push_release") anim_speed = 4
  anim_frame += 1
- if anim_frame >= 8 then
+ if anim_frame >= anim_speed then
   anim_frame = 0
   anim_index += 1
   if anim_index > #anim then
