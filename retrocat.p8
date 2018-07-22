@@ -401,7 +401,7 @@ function demolisher_draw(d)
 
  -- cannon line
  local ball_line_x = d.x + 43
- local ball_line_y = d.y - 50 + d.shake_offset
+ local ball_line_y = d.y - 53 + d.shake_offset
  line(ball_line_x, ball_line_y, d.ball_x, d.ball_y, 0)
 
   -- cannon ball
@@ -419,7 +419,7 @@ end
 
 function demolisher_draw_arm(x,y)
  for i=0,11 do
-  sspr(88,30,9,2,x+i,y-i)
+  sspr(88,30,9,2,x+i*2,y-i*2)
  end
  sspr(88,25,10,5,x+21,y-26)
 end
