@@ -30,7 +30,7 @@ demolisher_ball_damage = 40
 
 building_life_max = 100
 
-paint_surface_bonus = 0.02
+paint_surface_bonus = 0.1
 
 particles = {}
 
@@ -38,11 +38,13 @@ score_bonus_building_paint = 20
 score_bonus_demolisher_hit = 5
 score_bonus_building_completed = 100
 
+debug_collisions = false
+
 score = 0
 
 function _init()
  --rock_create(20,scaffolding_y)
- building = building_init(3)
+ building = building_init(4)
  cat = cat_init()
  demolisher = demolisher_init()
  bucket = bucket_init()
@@ -308,6 +310,14 @@ function building_init(type)
   b.spr_y = 67
   b.spr_w = 51
   b.spr_h = 59
+ elseif type == 4 then
+  b.cx = 2
+  b.cw = 57
+  b.ch = 48
+  b.spr_x = 11
+  b.spr_y = 84
+  b.spr_w = 69
+  b.spr_h = 44
  end
 
  return b;
@@ -343,12 +353,13 @@ function building_draw(b)
  end
 
  --collisions debug
- -- local cx_start = b.x + b.cx
- -- local cx_end = cx_start + b.cw
- -- local cy_start = ground_y - b.ch
- -- local cy_end = ground_y
- -- rect(cx_start, cy_start, cx_end, cy_end, 11)
-
+ if debug_collisions then
+  local cx_start = b.x + b.cx
+  local cx_end = cx_start + b.cw
+  local cy_start = ground_y - b.ch
+  local cy_end = ground_y
+  rect(cx_start, cy_start, cx_end, cy_end, 11)
+ end
 end
 
 function building_hit(b, damage)
@@ -532,13 +543,15 @@ function demolisher_draw(d)
 
   -- cannon ball
  sspr(18, 0, 16, 16, d.ball_x-7, d.ball_y-8)
- --circ(d.ball_x, d.ball_y, 1, 11)
 
- -- local cx_start = d.x + d.cx
- -- local cx_end = cx_start + d.cw
- -- local cy_start = d.y + d.cy
- -- local cy_end = cy_start + d.ch
- -- rect(cx_start, cy_start, cx_end, cy_end, 11)
+ if debug_collisions then
+  circ(d.ball_x, d.ball_y, 1, 11)
+  local cx_start = d.x + d.cx
+  local cx_end = cx_start + d.cw
+  local cy_start = d.y + d.cy
+  local cy_end = cy_start + d.ch
+  rect(cx_start, cy_start, cx_end, cy_end, 11)
+ end
 
  --print(d.state, 0, 0)
 end
