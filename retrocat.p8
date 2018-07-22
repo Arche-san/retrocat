@@ -40,10 +40,11 @@ score_bonus_building_completed = 100
 
 debug_collisions = false
 
+tuto_active = true
+
 score = 0
 
 function _init()
- --rock_create(20,scaffolding_y)
  building = building_init(1)
  cat = cat_init()
  demolisher = demolisher_init()
@@ -53,18 +54,24 @@ end
 
 local key = false
 function _update60()
- building_update(building)
- cat_update(cat)
- demolisher_update(demolisher)
- bucket_update(bucket)
- painttap_update(painttap)
- foreach(paintbullets_arr, paintbullet_update)
- foreach(rocks_arr, rock_update)
+ if not tuto_active then
+  building_update(building)
+  cat_update(cat)
+  demolisher_update(demolisher)
+  bucket_update(bucket)
+  painttap_update(painttap)
+  foreach(paintbullets_arr, paintbullet_update)
+  foreach(rocks_arr, rock_update)
+ end
 end
 
 function _draw()
  palt(0, false)
  palt(11, true)
+ if tuto_active then
+  scene_tuto(1)
+  return
+ end
  bg_draw()
  building_draw(building)
  demolisher_draw(demolisher)
@@ -78,8 +85,6 @@ function _draw()
  --print("cpu=".. stat(1), 0, 112)
  --print("mem=".. stat(0), 0, 120)
  --print("nb part="..#particles, 0, 120)
- print()
- --scene_tuto(1)
 end
 
 -- print outline
@@ -1077,6 +1082,7 @@ function scene_tuto(lang)
  end
  if(not btn(5)) key_n = false
  if(tra == 32) tuto_page += 1
+ if(tra == 32 and tuto_page > 2) tuto_active = false
  if(tra != 0) scene_transition()
 end
 
