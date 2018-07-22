@@ -31,6 +31,7 @@ demolisher_xmax = 25
 demolisher_ball_damage = 40
 
 building_life_max = 100
+building_complete_hide = 60
 building_complete_duration = 180
 paint_surface_bonus = 0.2
 
@@ -298,7 +299,10 @@ function building_init(type)
   paint_surface_y = 0,
   life = 100,
   completed = false,
-  completed_timer = 0
+  completed_timer = 0,
+  show_transition = true,
+  hide_transition = false,
+  height = 0,
  }
 
  if type == 1 then
@@ -342,6 +346,9 @@ end
 function building_update(b)
  if b.completed then
   b.completed_timer += 1
+  if b.completed_timer >= building_complete_hide then
+   b.hide_transition = true
+  end
   if b.completed_timer >= building_complete_duration then
    local btype = 0
    repeat
@@ -361,6 +368,22 @@ function building_update(b)
 end
 
 function building_draw(b)
+ if b.show_transition then
+  b.height += 1
+  if b.height >= b.spr_h then
+   b.height = b.spr_h
+   b.show_transition = false
+  end
+ end
+
+ if b.hide_transition then
+  b.height -= 1
+  if b.height <= 0 then
+   b.height = 0
+   b.hide_transition = false
+  end
+ end
+
  -- building (with paint completion)
  local ystart = b.spr_y
  local yend = ystart + b.spr_h
@@ -368,12 +391,12 @@ function building_draw(b)
  local completed_ystart = yend - (height) * b.paint_surface
  local completed_height = yend - completed_ystart
  if b.completed then
-  building_draw_part(b.spr_x, ystart, b.spr_w, height, b.x, ground_y-height, true)
+  building_draw_part(b.spr_x, ystart, b.spr_w, b.height, b.x, ground_y-b.height, true)
  else
   if b.paint_surface > 0 then
    rectfill(b.x, b.paint_surface_y, b.x + b.spr_w-1, ground_y-1, 8)
   end
-  building_draw_part(b.spr_x, ystart, b.spr_w, height, b.x, ground_y-height, false)
+  building_draw_part(b.spr_x, ystart, b.spr_w, b.height, b.x, ground_y-b.height, false)
  end
 
  -- gauge
