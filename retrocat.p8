@@ -22,7 +22,7 @@ bucket_refill_position = 115
 
 demolisher_xmin = -20
 demolisher_xmax = 20
-demolisher_ball_damage = 10
+demolisher_ball_damage = 40
 
 building_life_max = 100
 
