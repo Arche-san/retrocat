@@ -34,6 +34,12 @@ paint_surface_bonus = 0.02
 
 particles = {}
 
+score_bonus_building_paint = 20
+score_bonus_demolisher_hit = 5
+score_bonus_building_completed = 100
+
+score = 0
+
 function _init()
  --rock_create(20,scaffolding_y)
  building = building_init(3)
@@ -66,9 +72,31 @@ function _draw()
  foreach(paintbullets_arr, paintbullet_draw)
  foreach(rocks_arr, rock_draw)
  foreach(particles, draw_particle)
- print("cpu=".. stat(1), 0, 112)
+ print_outline("\x92 "..num_format(score, 4), 100, 122, 7, 1)
+ --print("cpu=".. stat(1), 0, 112)
  --print("mem=".. stat(0), 0, 120)
- print("nb part="..#particles, 0, 120)
+ --print("nb part="..#particles, 0, 120)
+ print()
+end
+
+-- print outline
+function print_outline(s, x, y, c1, c2)
+ print(s, x-1, y, c2)
+ print(s, x, y-1, c2)
+ print(s, x+1, y, c2)
+ print(s, x, y+1, c2) 
+ print(s, x, y, c1)
+end
+
+function num_format(n, d)
+ local s = n
+ local ten_power = 10
+ for i=1,d-1 do
+  if(n < ten_power) s = "0"..s
+  ten_power *= 10
+ end
+
+ return s
 end
 
 -->8
@@ -253,6 +281,7 @@ function building_init(type)
   paint_surface = 0,
   paint_surface_y = 0,
   life = 100,
+  completed = false,
  }
 
  if type == 1 then
@@ -323,12 +352,21 @@ function building_draw(b)
 end
 
 function building_hit(b, damage)
+ if(b.completed) return
  b.life -= damage
 end
 
 function building_paint(b, surface)
  b.paint_surface += surface
  b.paint_surface = min(b.paint_surface, 1)
+ if b.paint_surface == 1 then
+  if not b.completed then
+   b.completed = true
+   score += score_bonus_building_completed
+  end
+ else
+  score += score_bonus_building_paint
+ end
 end
 
 function collide_with_building(x,y)
@@ -530,6 +568,7 @@ end
 function demolisher_stun(d)
  d.swing = false
  demolisher_setstate(d, demolisher_state_stun)
+ score += score_bonus_demolisher_hit
 end
 
 function demolisher_setstate(d, state)
@@ -839,6 +878,7 @@ function draw_particle(p)
  p.frame -= 1
  if(p.frame <= 0) del(particles,p)
 end
+
 -->8
 -- background
 function bg_draw()
