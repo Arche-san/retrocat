@@ -38,12 +38,14 @@ demolisher_stun_speed = 0.5
 demolisher_move_time = 30
 demolisher_move_speed = 0.5
 demolisher_retreat_speed = 0.5
+demolisher_trail_pop = 0
 
 builing_type_start = 1
 building_life_max = 100
 building_complete_hide = 60
 building_complete_duration = 180
 building_paint_surface_bonus = 35
+building_blink_frame = 0
 
 score_bonus_building_paint = 10
 score_bonus_demolisher_hit = 5
@@ -55,6 +57,7 @@ difficulty_factor_demolisher_idletime = 0.2
 
 debug_collisions = false
 
+title_active = false
 tuto_active = false
 
 -- global vars
@@ -62,6 +65,16 @@ score = 0
 nb_building_completed = 0
 particles = {}
 gameover = false
+lang = 1
+
+--screen shake struct
+scr = {
+ x = 0,
+ y = 0,
+ intensity_x = 0,
+ intensity_y = 0,
+ shake_time = 0
+}
 
 function _init()
  building = building_init(builing_type_start)
@@ -73,7 +86,8 @@ end
 
 local key = false
 function _update60()
- if not tuto_active then
+ if not tuto_active and
+    not title_active then
   building_update(building)
   cat_update(cat)
   demolisher_update(demolisher)
@@ -88,6 +102,7 @@ function _draw()
  palt(0, false)
  palt(11, true)
  bg_draw()
+ perform_shake()
  building_draw(building)
  demolisher_draw(demolisher)
  painttap_draw(painttap)
@@ -95,13 +110,15 @@ function _draw()
  bucket_draw(bucket)
  foreach(paintbullets_arr, paintbullet_draw)
  foreach(rocks_arr, rock_draw)
- foreach(particles, draw_particle)
+ --foreach(particles, draw_particle)
  print_outline("\x92 "..num_format(score, 4), 100, 122, 7, 1)
  --print("cpu=".. stat(1), 0, 112)
  --print("mem=".. stat(0), 0, 120)
  --print("nb part="..#particles, 0, 120)
- if(tuto_active) scene_tuto(1)
- if(gameover) print("gameover", 48, 64, 8)
+ if(title_active) scene_title()
+ if(tuto_active) scene_tuto(lang)
+ if(gameover) scene_gameover() --print("gameover", 48, 64, 8)
+ if(tra == 0) foreach(particles, draw_particle)
 end
 
 -- print outline
@@ -374,7 +391,9 @@ function building_init(type)
 end
 
 function building_update(b)
-
+ if(building_blink_frame > 0) then
+  building_blink_frame -= 1
+ end
  b.paint_surface_ratio = b.paint_surface / b.paint_surface_max
 
  if b.completed then
@@ -401,6 +420,10 @@ function building_update(b)
 end
 
 function building_draw(b)
+ if(building_blink_frame > 0 and
+    building_blink_frame%4 == 0) then
+    return
+ end
  if b.show_transition then
   b.height += 1
   if b.height >= b.spr_h then
@@ -458,6 +481,8 @@ end
 function building_hit(b, damage)
  if(b.completed) return
  b.life -= flr(damage * b.damage_multiplier)
+ shake_screen(2,3,40)
+ building_blink_frame = 80
  if b.life <= 0 then
   b.life = 0
   gameover = true
@@ -641,7 +666,7 @@ function demolisher_draw(d)
  -- base
  local spr_y = d.y -32 + d.shake_offset
  -- base part1
- sspr(0, 96, 11, 21, d.x-16, spr_y)
+ sspr(0, 106, 11, 11, d.x-16, spr_y+10)
  sspr(0, 117, 11, 1, d.x-16, d.y-12)
  sspr(0, 117, 11, 11, d.x-16, d.y-11)
  -- base part2
@@ -650,7 +675,15 @@ function demolisher_draw(d)
  sspr(103, 53, 25, 11, d.x-16+11, d.y-11+3)
  --sspr(0, 117, 48, 1, d.x-16, d.y-12)
  --sspr(0, 117, 48, 11, d.x-16, d.y-11)
-
+ --trail
+ rectfill(d.x+4,d.y-34+d.shake_offset,d.x+6,d.y-30+d.shake_offset,1)
+ demolisher_trail_pop += 1
+ if(demolisher_trail_pop >= 10) then
+  demolisher_trail_pop = 0
+  add_particle(d.x+5,d.y-38+d.shake_offset,
+   rnd(0.2)-0.1,rnd(0.25)-0.5,
+   rnd(1)+3,6,0,128,40,1.02)
+ end
  -- arm
  local arm_x = d.x + 11
  local arm_y = d.y - 31 + d.shake_offset
@@ -958,7 +991,13 @@ end
 
 function painttap_draw(p)
  if p.opened then
-  rectfill(p.x-15, p.y+15, p.x-13, p.y+23, 8)
+  rectfill(p.x-15, p.y+15, p.x-13, p.y+25,8)
+  if(bucket.paint_capacity ==
+     bucket_paint_capacity_max) then
+   add_particle(p.x-15,p.y+25,
+   rnd(0.6)-0.3,rnd(0.2)-0.6,
+   1,8,0.1,30,20,1)
+  end
  end
 
  -- trigger
@@ -971,8 +1010,7 @@ function painttap_draw(p)
   end
   rectfill(trigger_xmin, trigger_ymin, trigger_xmax, trigger_ymax, 8)
   rect(trigger_xmin-1, trigger_ymin, trigger_xmax+1, trigger_ymax -1, 1)
-
- spr(46, p.x-16, p.y, 2, 2)
+  spr(46, p.x-16, p.y, 2, 2)
 end
 
 function painttap_open(p)
@@ -986,7 +1024,7 @@ function painttap_close(p)
  p.opened = false
 end
 
-function add_particle(x,y,vx,vy,r,c,g,gr,f)
+function add_particle(x,y,vx,vy,r,c,g,gr,f,ra,sp)
  local part = {}
  part.x = x
  part.y = y
@@ -997,6 +1035,9 @@ function add_particle(x,y,vx,vy,r,c,g,gr,f)
  part.gravity = g
  part.ground = gr
  part.frame = f
+ part.ratio = ra
+ part.sp = sp
+ if(ra == nil) part.ratio = 1.025
  if(f == nil) part.frame = 60
  add(particles, part)
 end
@@ -1013,7 +1054,11 @@ function add_splash(x,y)
 end
 
 function draw_particle(p)
- circfill(p.x,p.y,p.radius,p.col)
+ if(p.sp == nil) then
+  circfill(p.x,p.y,p.radius,p.col)
+ else
+  sspr(p.sp.x,p.sp.y,p.sp.w,p.sp.h,p.x,p.y,p.sp.w,p.sp.h)
+ end
  p.x += p.vx
  p.y += p.vy
  if(p.ground != nil and
@@ -1024,7 +1069,7 @@ function draw_particle(p)
     p.vy < 2) then
   p.vy += p.gravity
  end
- p.radius = p.radius / 1.025
+ p.radius = p.radius / p.ratio
  p.frame -= 1
  if(p.frame <= 0) del(particles,p)
 end
@@ -1097,11 +1142,12 @@ function ctxt(txt,x,y,c)
  print(txt,x-#txt/2*4,y,c)
 end
 
+
 --show tuto
-local tuto_page = 0
-local next_x = 0
-local key_n = false
-local tra = 0
+tuto_page = 0
+next_x = 0
+key_n = false
+tra = 0
 function scene_tuto(lang)
  --globals
  if(tra > 0) tra -= 2
@@ -1118,7 +1164,9 @@ function scene_tuto(lang)
  end
 
  --page 1
- if(tuto_page == 0) then
+ if(tuto_page < 0) then
+  scene_title()
+ elseif(tuto_page == 0) then
   ctxt(txts[2][lang],60,15,7)
   ctxt(txts[3][lang],62,65,7)
   ctxt(txts[4][lang],64,71,7)
@@ -1174,6 +1222,101 @@ function scene_tuto(lang)
  if(tra != 0) scene_transition()
 end
 
+--show title screen
+title_y = 0
+title_up = false
+title_shine = 0
+title_start = 0
+function scene_title()
+ cls(1)
+ --variables
+ if(title_up) title_y -= 0.1
+ if(not title_up) title_y += 0.1
+ title_shine += 2
+ palt(7,true)
+ --shine effect
+ rectfill(34,14+title_y,92,23+title_y,7)
+ if(title_shine < 58) then
+  local r = 0.6
+  r = 0.6 - title_shine/55
+  for y=0,9 do
+   line(34+title_shine+(9-y)*r,14+y+title_y,34+title_shine+8+(9-y)*r,14+y+title_y,6)
+  end 
+ end
+ rectfill(93,14+title_y,128,23+title_y,1)
+ --sspr text
+ sspr(57,64,20,10,34,14+title_y)
+ sspr(57,74,20,10,54,14+title_y)
+ sspr(0,84,11,10,74,14+title_y)
+ sspr(0,94,8,10,85,14+title_y)
+ palt(7,false)
+ --description
+ ctxt("save the old!",65,27+title_y,8)
+ ctxt("save the old!",64,26+title_y,7)
+ --cat sleeping
+ pal(1,7)
+ sspr(99,28,12,4,54,68)
+ local head = 0
+ if(title_shine > 200) head = 1
+ sspr(106,24,7,7,61,65-head)
+ if(title_shine % 60 == 0 and 
+    tra == 0 and title_active) then
+  add_particle(63,57,rnd(0.2)-0.1,
+    rnd(0.05)-0.1,0,1,0,
+    128,75,1,
+    {x=108,y=18,w=4,h=4})
+ end
+ pal()
+ --flags
+ rect(31,85,49,97,7)
+ rectfill(38,87,42,95,7)
+ rectfill(43,87,47,95,8)
+ rect(78,85,96,97,7)
+ rectfill(80,90,94,92,7)
+ rectfill(86,87,88,95,7)
+ line(80,87,94,95,7)
+ line(94,87,80,95,7)
+ line(80,91,94,91,8)
+ line(87,87,87,95,8)
+ if(title_shine > 80 or
+    title_start > 0) then
+  local c1 = 7
+  local c2 = 7
+  if(title_start > 0 and title_start/2%2 == 0 and lang == 2) c1 = 8
+  if(title_start > 0 and title_start/2%2 == 0 and lang == 1) c2 = 8
+  ctxt("presser",35,104,c1)
+  if(c1 == 7) spr(1,53,104)
+  if(c1 == 8) spr(17,53,104)
+  ctxt("press ❎",87,104,c2)
+ end
+ --frames variables
+ if(title_y > 8) title_up = true
+ if(title_y < 0)  title_up = false
+ if(title_start > 0) title_start -= 1
+ if(title_start == 10) then
+  tuto_page = -1
+  tra = 120
+  tuto_active = true
+  title_active = false
+  for p in all(particles) do del(particles,p) end
+ end
+ if(title_shine >= 400) title_shine = 0
+ --start
+ if((btn(5) or btn(4)) and 
+    not key_n and
+    title_start == 0) then
+  key_n = true
+  title_start = 80
+  if(btn(5)) lang = 1
+  if(btn(4)) lang = 2
+ end
+ if(not btn(5) and not btn(4)) key_n = false
+end
+
+function scene_gameover()
+ building_draw(building)
+end
+
 function scene_transition()
  for x=0,15 do for y=0,15 do
   if(tra > 32) then
@@ -1183,39 +1326,59 @@ function scene_transition()
 	 end
  end end
 end
+
+--screen shake
+function shake_screen(x,y,t)
+ scr.intensity_x = x
+ scr.intensity_y = y
+ scr.shake_time = abs(t)
+end
+
+function perform_shake()
+ if(scr.shake_time > 0) then
+  scr.x = (rnd(2)-1)*scr.intensity_x
+  scr.y = (rnd(2)-1)*scr.intensity_y
+  scr.shake_time -= 1
+ else
+  scr.x = 0
+  scr.y = 0
+ end
+	camera(scr.x,scr.y)
+end
+
 __gfx__
-bb1bbbbbbbbbbbbbbbbbbbb11111bbbbbbb1111bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbb11bbbbbbbbbbbbbbbb111177711bbbb116161bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bb1bb1bbbbbbbbbbbbbb11111111771bbb111661bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-b1bbbb1bbbbbbbbbbbb1111111111171bbb1111bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-b1bbbbbbbbbbbbbbbbb1711111111171bbbbbbbbbbbbbbbbb1b1bbbbbbbbbbbbbbbbbbbbbbbbbbbbbb1b1bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-111bbbbbbbbbbbbbbb171711111111171bbbbbbbbbbbbbbb11b11bbbbbbbbbbbbb1b1bbbbbbbbbbbb11b11bbbbbbbbbbbb1b1bbbbbbbbbbbbb1b1bbbbbbbbbbb
-111bbbbbbbbbbbbbbb117111111111171bbbbbbbbbbbbbbb11b11bbbbbbbbbbbb11b11bbbbbbbbbb111111bbbbbbbbbbb11b11bbbbbbbbbbb11b11bbbbbbbbbb
-b1bbbbbbbbbbbbbbbb171711111111171bbbbbbbbbbbbbb1111111bbbbbbbbbb111111bbbbbbbbbb117171bbbbbbbbbb111111bbbbbbbbbb111111bbbbbbbbbb
-1bbb1bbbbbbbbbbbbb117111111111171bbbbbbbbbbbbbb1171711bbbbbbbbbb117171bbbbbbbbbb117171bbbbbbbbbb117171bbbbbbbbbb117171bbbbbbbbbb
-b111bbbbbbbbbbbbbb171711111111111bbbbbbbbbbbbbb1171711bbbbbbbbbb117171bbbbbbbbbbb1111bbbbbbbb1bb117171bbbbbbbbbb117171bbbbbbbbbb
-1bbb1bbbbbbbbbbbbbb1711111111111bbbbbbbbbbbb1bbb11111bbbbbbb1bbbb1111bbbbbb11bbbb111bbbbbbbbb1bbb1111bbbbbbb1bbbb1111bbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbb1171111111111bbbbbbbbbbbb1bbbb111bbbbbbbb1bbbb111bbbbbbbbb1b11111bbbbbbbbb1b11111bbbbbbbbb1bbb111bbbbbbbbbbbb
-111bb1b1bbbbbbbbbbbb11711111111bbbbbbbbbbbbbb1b11111bbbbbbbbb1b11111bbbbbbbbbb11111111bbbbbbbb111111bbbbbbbbb1b11111bbbbbbbbbbbb
-11bb111bbbbbbbbbbbbbb117111111bbbbbbbbbbbbbbbb111111bbbbbbbbbb111111bbbbbbbbb11111111bbbbbbbb1111111bbbbbbbbbb111111bbbbbbbbbbbb
-bbbbbbb1bbbbbbbbbbbbbbb11111bbbbbbbbbbbbbbbbbb111111bbbbbbbbbb1111111bbbbbbbb11bbbbbbbbbbbbbbbbbb111bbbbbbbbbb111111bbbbbbbbbbbb
-11bb1b11bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb1b11b1bbbbbbbbbb11bb1b1bbbbbbbbbbbbbbbbbbbbbbbbbbbbb11bbbbbbbbbbb11b1bbbbbbbbbbbbb
+bb1bbbbb17777711bbbbbbb11111bbbbbbb1111bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbb11bbb77111771bbbbb111177711bbbb116161bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bb1bb1bb77177771bbbb11111111771bbb111661bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+b1bbbb1b77111771bbb1111111111171bbb1111bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+b1bbbbbb17777711bbb1711111111171bbbbbbbbbbbbbbbbb1b1bbbbbbbbbbbbbbbbbbbbbbbbbbbbbb1b1bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+111bbbbb11111111bb171711111111171bbbbbbbbbbbbbbb11b11bbbbbbbbbbbbb1b1bbbbbbbbbbbb11b11bbbbbbbbbbbb1b1bbbbbbbbbbbbb1b1bbbbbbbbbbb
+111bbbbb11111111bb117111111111171bbbbbbbbbbbbbbb11b11bbbbbbbbbbbb11b11bbbbbbbbbb111111bbbbbbbbbbb11b11bbbbbbbbbbb11b11bbbbbbbbbb
+b1bbbbbb11111111bb171711111111171bbbbbbbbbbbbbb1111111bbbbbbbbbb111111bbbbbbbbbb117171bbbbbbbbbb111111bbbbbbbbbb111111bbbbbbbbbb
+1bbb1bbb18888811bb117111111111171bbbbbbbbbbbbbb1171711bbbbbbbbbb117171bbbbbbbbbb117171bbbbbbbbbb117171bbbbbbbbbb117171bbbbbbbbbb
+b111bbbb88111881bb171711111111111bbbbbbbbbbbbbb1171711bbbbbbbbbb117171bbbbbbbbbbb1111bbbbbbbb1bb117171bbbbbbbbbb117171bbbbbbbbbb
+1bbb1bbb88188881bbb1711111111111bbbbbbbbbbbb1bbb11111bbbbbbb1bbbb1111bbbbbb11bbbb111bbbbbbbbb1bbb1111bbbbbbb1bbbb1111bbbbbbbbbbb
+bbbbbbbb88111881bbb1171111111111bbbbbbbbbbbb1bbbb111bbbbbbbb1bbbb111bbbbbbbbb1b11111bbbbbbbbb1b11111bbbbbbbbb1bbb111bbbbbbbbbbbb
+11bb111b18888811bbbb11711111111bbbbbbbbbbbbbb1b11111bbbbbbbbb1b11111bbbbbbbbbb11111111bbbbbbbb111111bbbbbbbbb1b11111bbbbbbbbbbbb
+11b1bbb111111111bbbbb117111111bbbbbbbbbbbbbbbb111111bbbbbbbbbb111111bbbbbbbbb11111111bbbbbbbb1111111bbbbbbbbbb111111bbbbbbbbbbbb
+bbbbbb1b11111111bbbbbbb11111bbbbbbbbbbbbbbbbbb111111bbbbbbbbbb1111111bbbbbbbb11bbbbbbbbbbbbbbbbbb111bbbbbbbbbb111111bbbbbbbbbbbb
+11bb111111111111bbbbbbbbbbbbbbbbbbbbbbbbbbbbbb1b11b1bbbbbbbbbb11bb1b1bbbbbbbbbbbbbbbbbbbbbbbbbbbbb11bbbbbbbbbbb11b1bbbbbbbbbbbbb
 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb11111111bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 bbbb1b1bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb17777771bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbb11b11bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb71177117bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bb111111bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb77711777bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bb117171bbbbbbbbbbbbb1b1bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb111bbb11111111bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bb117171bbbbbbbbbbbb11b116bbbbbbbbbbbbbbb6bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb1bbb1bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb11b11b11bbb
+bbb11b11bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb71177117bbbbbbbbbbbb7777bbbbbbbbbbbbbbbb
+bb111111bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb77711777bbbbbbbbbbbb1171bbbbbbbbbbbbbbbb
+bb117171bbbbbbbbbbbbb1b1bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb111bbb11111111bbbbbbbbbbbb1711bbbbbbbbbbbbbbbb
+bb117171bbbbbbbbbbbb11b116bbbbbbbbbbbbbbb6bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb1bbb1bbbbbbbbbbbbbbbbbbbbbb7777bbbbb11b11b11bbb
 bbb1111bbbbbbbbbbbb111111b6bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb1bbbbb1bbbbbbbbbbbbbbbbbbbbbbbbbbbbbb11111111bbb
 bbb1111111bbbbbbbbb117171b6bbbbbbbbbbbb1b166bbbbbbbbbbb1b1bbbbbbbbbbbbb1b1bbbbbb1bbbbb1bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb11bbbbbb
-bbb111111bbbbbbbbbb117171b66bbbbbbbbbb11b116bbbbbbbbbb11b11bbbbbbbbbbb11b11bbbbb1bbbbb1bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb1771bbbbb
-bbb1111bbbbbbbbbbbbb1111bb66bbbb1bbbb11111166bbb1bbbb1111116bbbb1bbbb111111bbbbb1111111bbbbbbb111bbbbbbbbbbbbbbbbbbbbb111111bbbb
-bbb1111bbbbbbbbbbbbb1111116bbbbbb1bbb117171b66bbb1bbb117171bbbbbb1bbb117171bbbbb1111111bbbbbb17711bbbbbbbbbbbbbbbbbbbbb1111bbb11
-bbb1111bbbbbbbbbbbb1111116bbbbbbb1bbb117171b666bb1bbb117171b6bbbb1bbb117171bbbbb1bb11b1bbbbb1777111bbbbbbbbbbbbbbb11111171717111
-b11111bbbbbbbbbb1111111bbbbbbbbbb1111b1111bbb66bb1111b1111bb66bbb1111b1111bbbbbb1bb1bb1bbbb17771711bbbbbbbbbbbbbb177111117171711
-1bb111bbbbbbbbbbbbb111bbbbbbbbbbb11111111bbbb66bb11111111bbbb6bbb11111111bbbbbbb1bbbbb1bbb17771171bbbbbbbbbbbbbbb171111111111111
-bbb111bbbbbbbbbbbbb111bbbbbbbbbbbb111111111166bbbb111111111166bbbb1111111111bbbb1bbbbb1bb17771711bbbbbbbbbbbbbbbb111bbb1111bbb11
-bbb11bbbbbbbbbbbbbb11bbbbbbbbbbbbbb11bbb11166bbbbbb11bbb11166bbbbbb11bbb111bbbbbb11111bb17771111bbbbbbbbbbbbbbbbb111bbbb11bbbbbb
+bbb111111bbbbbbbbbb117171b66bbbbbbbbbb11b116bbbbbbbbbb11b11bbbbbbbbbbb11b11bbbbb1bbbbb1bbbbbbbbbbbbbbbbbbbbb1b1bbbbbbbb1771bbbbb
+bbb1111bbbbbbbbbbbbb1111bb66bbbb1bbbb11111166bbb1bbbb1111116bbbb1bbbb111111bbbbb1111111bbbbbbb111bbbbbbbbbb11b11bbbbbb111111bbbb
+bbb1111bbbbbbbbbbbbb1111116bbbbbb1bbb117171b66bbb1bbb117171bbbbbb1bbb117171bbbbb1111111bbbbbb17711bbbbbbbbb11b11bbbbbbb1111bbb11
+bbb1111bbbbbbbbbbbb1111116bbbbbbb1bbb117171b666bb1bbb117171b6bbbb1bbb117171bbbbb1bb11b1bbbbb1777111bbbbbbb1111111b11111171717111
+b11111bbbbbbbbbb1111111bbbbbbbbbb1111b1111bbb66bb1111b1111bb66bbb1111b1111bbbbbb1bb1bb1bbbb17771711bbb1b111111111177111117171711
+1bb111bbbbbbbbbbbbb111bbbbbbbbbbb11111111bbbb66bb11111111bbbb6bbb11111111bbbbbbb1bbbbb1bbb17771171bb1111111111111171111111111111
+bbb111bbbbbbbbbbbbb111bbbbbbbbbbbb111111111166bbbb111111111166bbbb1111111111bbbb1bbbbb1bb17771711bb1bb1111111111b111bbb1111bbb11
+bbb11bbbbbbbbbbbbbb11bbbbbbbbbbbbbb11bbb11166bbbbbb11bbb11166bbbbbb11bbb111bbbbbb11111bb17771111bbb11bb11111111bb111bbbb11bbbbbb
 7777777777777777777777777777777717777777777777777777777777777777777711111111111111111111111111177777777bbbbbbb11111111111111111b
 7777777777777777777777777777777117777777777777777777777777777777777155555555555555555555555555117777777bbbbbb1777777771777777771
 7777777777777777777777777777777117117777777777777777777777777777771551111111111199111111111551f17777777bbbbbb1777111111111111111
@@ -1248,46 +1411,46 @@ bbb11bbbbbbbbbbbbbb11bbbbbbbbbbbbbb11bbb11166bbbbbb11bbb11166bbbbbb11bbb111bbbbb
 77777777144117714411771441177144114444441222114444117777777111119911111221111a1a11111119911111111a11771bbbbbbbbbbbbbbbbbbbbbbbbb
 77777777144111a1441111144111a144114444441122114eee1177777771111111911222211a111111111119111111aaa111771bbbbbbbbbbbbbbbbbbbbbbbbb
 77777777144444d4444dd4444444d4441144e4ee122211444411777777711111111111111111a11111111111111111111111771bbbbbbbbbbbbbbbbbbbbbbbbb
-777777771444444444d44444444d444411444444122211ee441177777bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-aaaaa1111111111111111111111111111111111111111111111111111bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-aaaaaa111111111111111111111111111111111111111111111111111bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-7aaaa1111111111111111111111111111111111111111111111111117bbbbbbbbbbbbbbbbbbbb77777777777777777777777aa77777777777777777777777777
-77aa77716661166666661166666661166666661111111111111117777bbbbbbbbbbbbbbbbbbbb77777777777777777777777aa77777777777777777777777777
-777aa7716666116666666116666666196666661111111111111117777bbbbbbbbbbbbbbbbbbbb7777777777777777777777aaaa7777777777777777777777777
-7777a171444441144444441944444449944444111111111111aa17777bbbbbbbbbbbbbbbbbbbb7777777777777777777777aaaa7777777777777777777777777
-77777111dd4444114444d449944444449944441111111111111117777bbbbbbbbbbbbbbbbbbbb77777777777777777777777aa77777777777777777777777777
-7777771144444441144dd4449944dd44499444111111a1a1111117777bbbbbbbbbbbbbbbbbbbb777777777777777777777711a17777777777777777777777777
-77777771ddd44444144d444449444d444494441111111111111117777bbbbbbbbbbbbbbbbbbbb777777777777777777777711117777777777777777777777777
-7777777144444444444444444444d4444444441111111111111117777bbbbbbbbbbbbbbbbbbbb777777777777777777777771177777777777777777777777777
-77777771441111144444444444444441111144111111a1a1111117777bbbbbbbbbbbbbbbbbbbb777777777777777777777711117777777777777777777777777
-7777777144111114444111111114444111114411111111a1111117777bbbbbbbbbbbbbbbbbbbb777777777777777777777711117777777777777777777777777
-7777777144444d4444411212121444444444d411111111aaa11117777bbbbbbbbbbbbbbbbbbbb777777777777777777711111111111777777777777777777777
-7777777144444444444112121214444444444411111111a1111117777bbbbbbbbbbbbbbbbbbbb7777777777777777771ff2fff11111177777777777777777777
-777777714444444dddd11212121444ddd4444411111111a1111117777bbbbbbbbbbbbbbbbbbbb7777777777777777771f9221f11171177777777777777777777
-7777777144d444444441121212144444d444441111111111111117777bbbbbbbbbbbbbbbbbbbb777777777777777771ff9ff9ff1171117777777777777777777
-77777771dddd44444dd112121214444dddd444111aaa1111111117777bbbbbbbbbbbbbbbbbbbb777777777777777771cf9ff1ff1117117777777777777777777
-77777771444444444441121212144444d4444411111a1111111117777bbbbbbbbbbbbbbbbbbbb7777777777777777acc99f211ff11d1aa777777777777777777
-777777711111111111111111111111111111111111111111111117777bbbbbbbbbbbbbbbbbbbb7777777777777777acc9ffff9ff111d11777777777777777777
-bbbbbbbbbbb77777777777777777777777777777777777711111aaa1117777777777777777777777777777777777acc99f99f91ff11d11177777777777777777
-bbbbbbbbbbb777777777777777777777777777777777777111111a111177777777777777777777777777777777771cf9ff99ff9ff111d1177777777777777777
-bbbbbbbbbbb777777777777777777777777777777777777715555155177777777777777777777777777777777771fff9f299ff9fff1117117777777777777777
-bbbbbbbbbbb777777777777777777777777777777777777711111111177777777777777777777777777777777711f9f9ff99ff1f1f1117111777777777777777
-bbbbbbbbbbb77777771199991111111111199991111111111555515511111111111111777777777777777777711222ff22fffffffff111111177777777777777
-bbbbbbbbbbb7777771ffcffcff2ffffcfffcffcfffffffff155551551fff1fffffffff1777777777777777771111111111111111111111111aa7777777777777
-bbbbbbbbbbb777771fffcfcff22ffffccfffccffffffffff155551551ff1fffffffcfff17777777777777771777777155555555511111717777a777777777777
-bbbbbbbbbbb77771fffffcfff2ffcffffffffffffccfffff15555151ff1ffffcffffccff177777777777777777777714949d9414111117777777777777777777
-bbbbbbbbbbb7771fffffffffffffcfffffffffffffcfffff1555511ff1fffffccffffcfff1777777777777777777771d444d4d44111117777777777777777777
-bbbbbbbbbbb771ffffcccccfffffcf22ffccccccffffffff111111ff1fffffffffffffffff177777777777777777111111111111111111111777777777777777
-bbbbbbbbbbb71ffffcfffffffffffffffffffffffffffccffffffff1ffffffccccfffffffff1777777777777777ccfffffffffff111111111177777777777777
-bbbbbbbbbbb1ffffffffffffffffffffffffffffffffffffffffff1fffffffffffffffffffff177777777777771cc92f1ff9221ff11171171117777777777777
-bbbbbbbbbbb1111111111111111111111111111111111111111111111111111111111111111117777777777771ff29ff1ff92f1fff111711711a777777777777
-bbbbbbbbbbb777117716666666666666666666666666666116611666661111111111117711777777777777771f1f29ff1f29ff12f1f111d11711a77777777777
-bbbbbbbbbbb7777117144444411111111114444444dd444116441144441111111111117117777777777777a1ff1ff92f1ff1ff1221ff111d1171111777777777
-bbbbbbbbbbb77777111444441555555555514444444dd441164441144411111111111111777777777777aacccfffffffffffffffffffff111111111117777777
-bbbbbbbbbbb777777114444955111111115514444444d4411644441444111111111111177777777777aaaaaa1111111111111111111111111111111111777777
-bbbbbbbbbbb777777714dd49511414141415144444d4444116444d44441111111111117777777777777a77777111111111111111111111111117777717777777
-bbbbbbbbbbb7777777144d49519414141415144444444441164444dd441111111111117777777777777777777155555555555555551555555517777777777777
-bbbbbbbbbbb7777777ad4d495199999991151444d44dd44116411199141111777711117777777777777777777144111444441114441441111417777777777777
+777777771444444444d44444444d444411444444122211ee44117777711117777711777771777bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+aaaaa111111111111111111111111111111111111111111111111111111117777787777787777bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+aaaaaa11111111111111111111111111111111111111111111111111111177887787777887777bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+7aaaa11111111111111111111111111111111111111111111111111171177887778778881187777777777777777777777777aa77777777777777777777777777
+77aa777166611666666611666666611666666611111111111111177771177777887777711177777777777777777777777777aa77777777777777777777777777
+777aa7716666116666666116666666196666661111111111111117777177777781778888117777777777777777777777777aaaa7777777777777777777777777
+7777a171444441144444441944444449944444111111111111aa17777177777787777711117777777777777777777777777aaaa7777777777777777777777777
+77777111dd4444114444d4499444444499444411111111111111177777778777877777711177777777777777777777777777aa77777777777777777777777777
+7777771144444441144dd4449944dd44499444111111a1a111111777777787787777778817778777777777777777777777711a17777777777777777777777777
+77777771ddd44444144d444449444d44449444111111111111111777718881881888888111888777777777777777777777711117777777777777777777777777
+7777777144444444444444444444d444444444111111111111111777777177777111777111777777777777777777777777771177777777777777777777777777
+77777771441111144444444444444441111144111111a1a111111777777877777717777717777777777777777777777777711117777777777777777777777777
+7777777144111114444111111114444111114411111111a111111777777877887787777787777777777777777777777777711117777777777777777777777777
+7777777144444d4444411212121444444444d411111111aaa1111777788877817787788787778777777777777777777711111111111777777777777777777777
+7777777144444444444112121214444444444411111111a1111117777811777778877817777787777777777777777771ff2fff11111177777777777777777777
+777777714444444dddd11212121444ddd4444411111111a1111117777811777777177817787787777777777777777771f9221f11171177777777777777777777
+7777777144d444444441121212144444d44444111111111111111777781177777787777778777777777777777777771ff9ff9ff1171117777777777777777777
+77777771dddd44444dd112121214444dddd444111aaa111111111777781777877787777778777777777777777777771cf9ff1ff1117117777777777777777777
+77777771444444444441121212144444d4444411111a1111111117777817778777817777881777777777777777777acc99f211ff11d1aa777777777777777777
+777777711111111111111111111111111111111111111111111117777111888188811888811187777777777777777acc9ffff9ff111d11777777777777777777
+7111777117777777777777777777777777777777777777711111aaa1117777777777777777777777777777777777acc99f99f91ff11d11177777777777777777
+77177777117777777777777777777777777777777777777111111a111177777777777777777777777777777777771cf9ff99ff9ff111d1177777777777777777
+77877787711777777777777777777777777777777777777715555155177777777777777777777777777777777771fff9f299ff9fff1117117777777777777777
+88877888771777777777777777777777777777777777777711111111177777777777777777777777777777777711f9f9ff99ff1f1f1117111777777777777777
+1111777777877777771199991111111111199991111111111555515511111111111111777777777777777777711222ff22fffffffff111111177777777777777
+111177777777777771ffcffcff2ffffcfffcffcfffffffff155551551fff1fffffffff1777777777777777771111111111111111111111111aa7777777777777
+77717778777777771fffcfcff22ffffccfffccffffffffff155551551ff1fffffffcfff17777777777777771777777155555555511111717777a777777777777
+7778177787777771fffffcfff2ffcffffffffffffccfffff15555151ff1ffffcffffccff177777777777777777777714949d9414111117777777777777777777
+777817788177771fffffffffffffcfffffffffffffcfffff1555511ff1fffffccffffcfff1777777777777777777771d444d4d44111117777777777777777777
+88881188111771ffffcccccfffffcf22ffccccccffffffff111111ff1fffffffffffffffff177777777777777777111111111111111111111777777777777777
+7777711111171ffffcfffffffffffffffffffffffffffccffffffff1ffffffccccfffffffff1777777777777777ccfffffffffff111111111177777777777777
+777777111111ffffffffffffffffffffffffffffffffffffffffff1fffffffffffffffffffff177777777777771cc92f1ff9221ff11171171117777777777777
+777777811111111111111111111111111111111111111111111111111111111111111111111117777777777771ff29ff1ff92f1fff111711711a777777777777
+18778811111777117716666666666666666666666666666116611666661111111111117711777777777777771f1f29ff1f29ff12f1f111d11711a77777777777
+117778111117777117144444411111111114444444dd444116441144441111111111117117777777777777a1ff1ff92f1ff1ff1221ff111d1171111777777777
+1117781111177777111444441555555555514444444dd441164441144411111111111111777777777777aacccfffffffffffffffffffff111111111117777777
+81177781111777777114444955111111115514444444d4411644441444111111111111177777777777aaaaaa1111111111111111111111111111111111777777
+71177781111777777714dd49511414141415144444d4444116444d44441111111111117777777777777a77777111111111111111111111111117777717777777
+781177781117777777144d49519414141415144444444441164444dd441111111111117777777777777777777155555555555555551555555517777777777777
+881118881117777777ad4d495199999991151444d44dd44116411199141111777711117777777777777777777144111444441114441441111417777777777777
 bbbbbbbbbbb7777777ad444151149494941514444d44444116411444141117171771117777777777777777777144444444444444441441711417777777777777
 bbbbbbbbbbb7777777144441511414141415144444d44441164914441411711711771177777777777777777111111111111111111111111111111a7777777777
 bbbb111111177777711111111111111111111114444dd441164911111411777777771177777777777777771ffffffffff22fffffffff111111111aa777777777
