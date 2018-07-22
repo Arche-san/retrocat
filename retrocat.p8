@@ -36,7 +36,7 @@ particles = {}
 
 function _init()
  --rock_create(20,scaffolding_y)
- building = building_init()
+ building = building_init(3)
  cat = cat_init()
  demolisher = demolisher_init()
  bucket = bucket_init()
@@ -59,9 +59,9 @@ function _draw()
  palt(11, true)
  bg_draw()
  building_draw(building)
- cat_draw(cat)
  demolisher_draw(demolisher)
  painttap_draw(painttap)
+ cat_draw(cat)
  bucket_draw(bucket)
  foreach(paintbullets_arr, paintbullet_draw)
  foreach(rocks_arr, rock_draw)
@@ -247,21 +247,41 @@ end
 
 -->8
 -- building
-function building_init()
- return {
+function building_init(type)
+ b = {
   x = 70,
-  cx = 10,
-  cw = 40,
-  ch = 40,
-  spr_x = 0,
-  spr_y = 32,
-  spr_w = 57,
-  spr_h = 52,
-  spr_scale = 2,
   paint_surface = 0,
   paint_surface_y = 0,
   life = 100,
  }
+
+ if type == 1 then
+  b.cx = 10
+  b.cw = 40
+  b.ch = 40
+  b.spr_x = 0
+  b.spr_y = 32
+  b.spr_w = 57
+  b.spr_h = 52
+ elseif type == 2 then
+  b.cx = 0
+  b.cw = 46
+  b.ch = 40
+  b.spr_x = 56
+  b.spr_y = 32
+  b.spr_w = 47
+  b.spr_h = 32
+ elseif type == 3 then
+  b.cx = 0
+  b.cw = 46
+  b.ch = 60
+  b.spr_x = 77
+  b.spr_y = 67
+  b.spr_w = 51
+  b.spr_h = 59
+ end
+
+ return b;
 end
 
 function building_update(b)
@@ -294,11 +314,11 @@ function building_draw(b)
  end
 
  --collisions debug
- -- local cx_start = b.x + b.cx
- -- local cx_end = cx_start + b.cw
- -- local cy_start = ground_y - b.ch
- -- local cy_end = ground_y
- -- rect(cx_start, cy_start, cx_end, cy_end, 11)
+ local cx_start = b.x + b.cx
+ local cx_end = cx_start + b.cw
+ local cy_start = ground_y - b.ch
+ local cy_end = ground_y
+ rect(cx_start, cy_start, cx_end, cy_end, 11)
 
 end
 
@@ -662,7 +682,7 @@ end
 
 function bucket_shake(b, force)
  if(b.refilling) return
- 
+
  local nbbullets = bucket_shake_nbbullets_min + flr((bucket_shake_nbbullets_max - bucket_shake_nbbullets_min) * force)
  
  local i=0
