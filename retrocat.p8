@@ -486,8 +486,8 @@ function demolisher_init()
   swing = false,
   swing_time = 0,
   swing_force = 0,
-  ball_x = 0,
-  ball_y = 0,
+  ball_x = 49,
+  ball_y = ground_y - 20,
  }
 end
 
