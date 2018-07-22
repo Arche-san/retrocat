@@ -24,7 +24,7 @@ bucket_shake_nbbullets_max = 3
 bucket_paint_capacity_max = 10
 bucket_refill_position = 115
 
-demolisher_xmin = -25
+demolisher_xmin = -50
 demolisher_xmax = 25
 demolisher_ball_damage = 40
 
@@ -299,8 +299,8 @@ function building_init(type)
  }
 
  if type == 1 then
-  b.cx = 10
-  b.cw = 40
+  b.cx = 5
+  b.cw = 45
   b.ch = 40
   b.spr_x = 0
   b.spr_y = 32
@@ -473,7 +473,7 @@ demolisher_state_retreat = 5
 
 function demolisher_init()
  return {
-  x = 10,
+  x = demolisher_xmin,
   y = ground_y,
   cx = -16,
   cy = -32,
@@ -486,8 +486,14 @@ function demolisher_init()
   swing = false,
   swing_time = 0,
   swing_force = 0,
-  ball_x = 49,
+  ball_x = demolisher_xmin + 39,
   ball_y = ground_y - 20,
+  idle_time = 300,
+  move_time = 30,
+  move_speed = 0.5,
+  stun_time = 30,
+  stun_speed = 0.5,
+  retreat_speed = 0.5,
  }
 end
 
@@ -524,18 +530,15 @@ function demolisher_update(d)
  d.state_time = state_time
 
  if state == demolisher_state_idle then
-  if(state_time >= 300) demolisher_move(d)
+  if(state_time >= d.idle_time) demolisher_move(d)
  
  elseif state == demolisher_state_move then
-  d.x += 0.5
+  d.x += d.move_speed
   if d.x >= demolisher_xmax then
    d.x = demolisher_xmax
    demolisher_attack(d)
   end
-  if(state_time >= 30) demolisher_idle(d)
- 
- elseif state == demolisher_state_loading then
-  if(state_time >= 300) demolisher_attack(d)
+  if(state_time >= d.move_time) demolisher_idle(d)
  
  elseif state == demolisher_state_attack then
   if(collide_with_building(d.ball_x, d.ball_y)) then
@@ -544,13 +547,13 @@ function demolisher_update(d)
   end
 
  elseif state == demolisher_state_stun then
-  d.x -= 0.5
-  if state_time >= 30 then
+  d.x -= d.stun_speed
+  if state_time >= d.stun_time then
    demolisher_idle(d)
   end
 
  elseif state == demolisher_state_retreat then
-  d.x -= 0.5
+  d.x -= d.retreat_speed
   if (d.x <= demolisher_xmin) and (not building.completed) then
    demolisher_idle(d)
   end
