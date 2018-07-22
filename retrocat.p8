@@ -29,8 +29,8 @@ demolisher_xmax = 25
 demolisher_ball_damage = 40
 
 building_life_max = 100
-
-paint_surface_bonus = 0.1
+building_complete_duration = 180
+paint_surface_bonus = 0.2
 
 particles = {}
 
@@ -99,6 +99,14 @@ function num_format(n, d)
  end
 
  return s
+end
+
+function rnd_range(min, max)
+ return min + rnd(max-min)
+end
+
+function rnd_range_i(min, max)
+ return min + flr(rnd((max+1)-min))
 end
 
 -->8
@@ -284,6 +292,7 @@ function building_init(type)
   paint_surface_y = 0,
   life = 100,
   completed = false,
+  completed_timer = 0
  }
 
  if type == 1 then
@@ -319,11 +328,24 @@ function building_init(type)
   b.spr_w = 69
   b.spr_h = 44
  end
+ b.type = type
 
  return b;
 end
 
 function building_update(b)
+ if b.completed then
+  b.completed_timer += 1
+  if b.completed_timer >= building_complete_duration then
+   local btype = 0
+   repeat
+    btype = rnd_range_i(1,4)
+   until btype != b.type
+   building = building_init(btype)
+   return
+  end
+ end
+
  local ystart = b.spr_y
  local yend = ystart + b.spr_h
  local height = yend - ystart
@@ -372,12 +394,18 @@ function building_paint(b, surface)
  b.paint_surface = min(b.paint_surface, 1)
  if b.paint_surface == 1 then
   if not b.completed then
-   b.completed = true
-   score += score_bonus_building_completed
+   building_complete(b)
   end
  else
   score += score_bonus_building_paint
  end
+end
+
+function building_complete(b)
+ b.completed = true
+ b.completed_timer = 0
+ score += score_bonus_building_completed
+ demolisher_retreat(demolisher)
 end
 
 function collide_with_building(x,y)
@@ -432,6 +460,7 @@ demolisher_state_idle = 1
 demolisher_state_move = 2
 demolisher_state_attack = 3
 demolisher_state_stun = 4
+demolisher_state_retreat = 5
 
 function demolisher_init()
  return {
@@ -510,6 +539,12 @@ function demolisher_update(d)
   if state_time >= 30 then
    demolisher_idle(d)
   end
+
+ elseif state == demolisher_state_retreat then
+  d.x -= 0.5
+  if (d.x <= demolisher_xmin) and (not building.completed) then
+   demolisher_idle(d)
+  end
  end
 
  if d.x < demolisher_xmin then
@@ -566,6 +601,11 @@ end
 function demolisher_idle(d)
  d.swing = false
  demolisher_setstate(d, demolisher_state_idle)
+end
+
+function demolisher_retreat(d)
+ d.swing = false
+ demolisher_setstate(d, demolisher_state_retreat)
 end
 
 function demolisher_move(d)
