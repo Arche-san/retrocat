@@ -3,6 +3,8 @@ version 16
 __lua__
 
 --main
+
+-- game settings
 ground_y = 108
 scaffolding_y = 30
 
@@ -32,8 +34,6 @@ building_life_max = 100
 building_complete_duration = 180
 paint_surface_bonus = 0.2
 
-particles = {}
-
 score_bonus_building_paint = 20
 score_bonus_demolisher_hit = 5
 score_bonus_building_completed = 100
@@ -42,7 +42,10 @@ debug_collisions = false
 
 tuto_active = true
 
+-- global vars
 score = 0
+nb_building_completed = 0
+particles = {}
 
 function _init()
  building = building_init(1)
@@ -414,6 +417,7 @@ function building_complete(b)
  b.completed = true
  b.completed_timer = 0
  score += score_bonus_building_completed
+ nb_building_completed += 1
  demolisher_retreat(demolisher)
 end
 
@@ -886,6 +890,17 @@ function painttap_draw(p)
  if p.opened then
   rectfill(p.x-15, p.y+15, p.x-13, p.y+23, 8)
  end
+
+ -- trigger
+  local trigger_xmin = bucket_refill_position -3
+  local trigger_xmax = bucket_refill_position +1
+  local trigger_ymin = scaffolding_y
+  local trigger_ymax = scaffolding_y - 1
+  if p.opened then
+   trigger_ymax += 1
+  end
+  rectfill(trigger_xmin, trigger_ymin, trigger_xmax, trigger_ymax, 8)
+  rect(trigger_xmin-1, trigger_ymin, trigger_xmax+1, trigger_ymax -1, 1)
 
  spr(46, p.x-16, p.y, 2, 2)
 end
