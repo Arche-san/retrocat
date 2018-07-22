@@ -12,13 +12,14 @@ rock_push_force = 0.5
 rock_push_time = 15
 rock_damage = 10
 
+cat_move_speed = 0.65
 cat_charge_full_duration = 30
 cat_push_range = 10
 cat_hpush_freeze = 24
 cat_vpush_freeze = 24
 
 bucket_push_force_min = 1
-bucket_push_force_max = 2
+bucket_push_force_max = 3
 bucket_push_time = 15
 bucket_shake_time = 15
 bucket_shake_nbbullets_min = 1
@@ -28,20 +29,21 @@ bucket_refill_position = 115
 bucket_refill_period = 30
 bucket_refill_value = 1
 
-demolisher_xmin = -50
-demolisher_xmax = 25
-demolisher_ball_damage = 40
-demolisher_idletime_start = 600
+demolisher_xmin = -30
+demolisher_xmax = 20
+demolisher_ball_damage = 25
+demolisher_idletime_start = 300
 demolisher_stun_time = 30
 demolisher_stun_speed = 0.5
 demolisher_move_time = 30
 demolisher_move_speed = 0.5
 demolisher_retreat_speed = 0.5
 
+builing_type_start = 1
 building_life_max = 100
 building_complete_hide = 60
 building_complete_duration = 180
-building_paint_surface_bonus = 0.2
+building_paint_surface_bonus = 45
 
 score_bonus_building_paint = 20
 score_bonus_demolisher_hit = 5
@@ -49,11 +51,11 @@ score_bonus_building_completed = 100
 
 difficulty_building_step = 1
 difficulty_factor_paintsurface = 0.25
-difficulty_factor_demolisher_idletime = 0.1
+difficulty_factor_demolisher_idletime = 0.35
 
 debug_collisions = false
 
-tuto_active = true
+tuto_active = false
 
 -- global vars
 score = 0
@@ -62,7 +64,7 @@ particles = {}
 gameover = false
 
 function _init()
- building = building_init(1)
+ building = building_init(builing_type_start)
  cat = cat_init()
  demolisher = demolisher_init()
  bucket = bucket_init()
@@ -164,11 +166,11 @@ function cat_update(c)
   -- move
   if not c.charging then
    if btn(1) then
-    c.x += 0.5
+    c.x += cat_move_speed
     c.spr_flip = false
     cat_setanim(c, "walk")
    elseif btn(0) then
-    c.x -= 0.5
+    c.x -= cat_move_speed
     c.spr_flip = true
     cat_setanim(c, "walk")
    else 
@@ -310,6 +312,8 @@ function building_init(type)
  b = {
   x = 70,
   paint_surface = 0,
+  paint_surface_max = 100,
+  paint_surface_ratio = 0,
   paint_surface_y = 0,
   life = 100,
   completed = false,
@@ -327,7 +331,10 @@ function building_init(type)
   b.spr_y = 32
   b.spr_w = 57
   b.spr_h = 52
+  b.paint_surface_max = 100
+  b.damage_multiplier = 1
  elseif type == 2 then
+  b.x = 80
   b.cx = 0
   b.cw = 46
   b.ch = 40
@@ -335,6 +342,8 @@ function building_init(type)
   b.spr_y = 32
   b.spr_w = 47
   b.spr_h = 32
+  b.paint_surface_max = 70
+  b.damage_multiplier = 2
  elseif type == 3 then
   b.cx = 0
   b.cw = 45
@@ -343,7 +352,10 @@ function building_init(type)
   b.spr_y = 67
   b.spr_w = 51
   b.spr_h = 59
+  b.paint_surface_max = 120
+  b.damage_multiplier = 0.8
  elseif type == 4 then
+  b.x = 65
   b.cx = 2
   b.cw = 57
   b.ch = 48
@@ -351,6 +363,8 @@ function building_init(type)
   b.spr_y = 84
   b.spr_w = 69
   b.spr_h = 44
+  b.paint_surface_max = 150
+  b.damage_multiplier = 0.75
  end
  b.type = type
 
@@ -358,6 +372,9 @@ function building_init(type)
 end
 
 function building_update(b)
+
+ b.paint_surface_ratio = b.paint_surface / b.paint_surface_max
+
  if b.completed then
   b.completed_timer += 1
   if b.completed_timer >= building_complete_hide then
@@ -376,7 +393,7 @@ function building_update(b)
  local ystart = b.spr_y
  local yend = ystart + b.spr_h
  local height = yend - ystart
- local paint_ystart = yend - (height) * b.paint_surface
+ local paint_ystart = yend - (height) * b.paint_surface_ratio
  local paint_height = yend - paint_ystart
  b.paint_surface_y =  ground_y - paint_height
 end
@@ -402,25 +419,28 @@ function building_draw(b)
  local ystart = b.spr_y
  local yend = ystart + b.spr_h
  local height = yend - ystart
- local completed_ystart = yend - (height) * b.paint_surface
+ local completed_ystart = yend - (height) * b.paint_surface_ratio
  local completed_height = yend - completed_ystart
  if b.completed then
   building_draw_part(b.spr_x, ystart, b.spr_w, b.height, b.x, ground_y-b.height, true)
  else
-  if b.paint_surface > 0 then
+  if b.paint_surface_ratio > 0 then
    rectfill(b.x, b.paint_surface_y, b.x + b.spr_w-1, ground_y-1, 8)
   end
   building_draw_part(b.spr_x, ystart, b.spr_w, b.height, b.x, ground_y-b.height, false)
  end
 
  -- gauge
- local gauge_min = 75
- local gauge_max = 120
- rect(gauge_min-1,36,gauge_max+1,40,0)
- if b.life > 0 then
-  local gauge_ratio = 1 - b.life / building_life_max
-  local gauge_val = gauge_min + flr(gauge_ratio * (gauge_max - gauge_min))
-  rectfill(gauge_val,37,gauge_max,39,8)
+ if not b.completed then
+  local gauge_min = b.x + 10
+  local gauge_max = b.x + b.spr_w - 10
+  local gauge_y = ground_y - b.height - 7
+  rect(gauge_min-1,gauge_y-2,gauge_max+1,gauge_y+2,0)
+  if b.life > 0 then
+   local gauge_ratio = 1 - b.life / building_life_max
+   local gauge_val = gauge_min + flr(gauge_ratio * (gauge_max - gauge_min))
+   rectfill(gauge_val,gauge_y-1,gauge_max,gauge_y+1,8)
+  end
  end
 
  --collisions debug
@@ -435,7 +455,7 @@ end
 
 function building_hit(b, damage)
  if(b.completed) return
- b.life -= damage
+ b.life -= flr(damage * b.damage_multiplier)
  if b.life <= 0 then
   b.life = 0
   gameover = true
@@ -444,14 +464,15 @@ end
 
 function building_paint(b, surface)
  b.paint_surface += surface
- b.paint_surface = min(b.paint_surface, 1)
- if b.paint_surface == 1 then
+ if b.paint_surface >= b.paint_surface_max then
+  b.paint_surface = b.paint_surface_max
   if not b.completed then
    building_complete(b)
   end
  else
   score += score_bonus_building_paint
  end
+ b.paint_surface_ratio = b.paint_surface / b.paint_surface_max
 end
 
 function building_complete(b)
