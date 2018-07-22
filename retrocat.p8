@@ -165,7 +165,7 @@ function cat_update(c)
  -- charge blink
  if c.charge_blink then
   c.charge_blink_timer += 1
-  if c.charge_blink_timer >= 20 then
+  if c.charge_blink_timer >= 8 then
    c.charge_blink = false
   end
  end
@@ -259,11 +259,18 @@ function building_init()
   spr_h = 52,
   spr_scale = 2,
   paint_surface = 0,
+  paint_surface_y = 0,
   life = 100,
  }
 end
 
 function building_update(b)
+ local ystart = b.spr_y
+ local yend = ystart + b.spr_h
+ local height = yend - ystart
+ local paint_ystart = yend - (height) * b.paint_surface
+ local paint_height = yend - paint_ystart
+ b.paint_surface_y =  ground_y - paint_height
 end
 
 function building_draw(b)
@@ -677,9 +684,11 @@ end
 function paintbullet_update(p)
  p.y += 1.5
  if collide_with_building(p.x, p.y) then
-  add_splash(p.x,p.y)
-  building_paint(building, paint_surface_bonus)
-  paintbullet_destroy(p)
+  if p.y >= building.paint_surface_y then
+   add_splash(p.x,p.y)
+   building_paint(building, paint_surface_bonus)
+   paintbullet_destroy(p)
+  end
  elseif collide_with_demolisher(demolisher, p.x, p.y) then
   demolisher_stun(demolisher)
   paintbullet_destroy(p)
