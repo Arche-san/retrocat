@@ -606,10 +606,26 @@ function bucket_init()
   state_time = 0,
   paint_capacity = bucket_paint_capacity_max,
   push_force,
+  refilling = false,
+  refill_timer = 0
  }
 end
 
 function bucket_update(b)
+ if is_bucket_in_refill_position() then
+  bucket_refill_start(b)
+ else
+  bucket_refill_stop(b)
+ end
+
+ if b.refilling then
+  b.refill_timer -= 1
+  if b.refill_timer <= 0 then
+   bucket_addpaint(bucket, 1)
+   b.refill_timer = 60
+  end
+ end
+
  -- state machine
  local state = b.state
  b.state_time += 1
@@ -645,6 +661,8 @@ function bucket_push(b, dir, force_ratio)
 end
 
 function bucket_shake(b, force)
+ if(b.refilling) return
+ 
  local nbbullets = bucket_shake_nbbullets_min + flr((bucket_shake_nbbullets_max - bucket_shake_nbbullets_min) * force)
  
  local i=0
@@ -660,7 +678,18 @@ function bucket_shake(b, force)
  b.state_time = 0
 end
 
-function bucket_refill(b, value)
+function bucket_refill_start(b)
+ if(b.refilling) return
+ b.refilling = true
+ b.refill_timer = 60
+end
+
+function bucket_refill_stop(b)
+ if(not b.refilling) return
+ b.refilling = false
+end
+
+function bucket_addpaint(b, value)
  b.paint_capacity += value
  b.paint_capacity = min(b.paint_capacity, bucket_paint_capacity_max)
 end
@@ -711,7 +740,6 @@ function painttap_init()
   x = 128,
   y = -3,
   opened = false,
-  refill_timer = 0
  }
 end
 
@@ -721,17 +749,6 @@ function painttap_update(p)
  else
   painttap_close(p)
  end
-
- if p.opened then
-  p.refill_timer -= 1
-  if p.refill_timer <= 0 then
-   if is_bucket_in_refill_position() then
-    bucket_refill(bucket, 1)
-   end
-   p.refill_timer = 60
-  end
- end
-
 end
 
 function painttap_draw(p)
