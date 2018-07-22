@@ -13,7 +13,7 @@ rock_push_time = 15
 rock_damage = 10
 
 cat_move_speed = 0.65
-cat_charge_full_duration = 15
+cat_charge_full_duration = 12
 cat_push_range = 10
 cat_hpush_freeze = 12
 cat_vpush_freeze = 12
@@ -24,15 +24,15 @@ bucket_push_time = 15
 bucket_shake_time = 15
 bucket_shake_nbbullets_min = 1
 bucket_shake_nbbullets_max = 3
-bucket_paint_capacity_max = 5
+bucket_paint_capacity_max = 10
 bucket_refill_position = 115
-bucket_refill_period = 30
+bucket_refill_period = 8
 bucket_refill_value = 1
 
 demolisher_xmin = -30
 demolisher_xmax = 20
-demolisher_ball_damage = 25
-demolisher_idletime_start = 300
+demolisher_ball_damage = 35
+demolisher_idletime_start = 120
 demolisher_stun_time = 30
 demolisher_stun_speed = 0.5
 demolisher_move_time = 30
@@ -43,15 +43,15 @@ builing_type_start = 1
 building_life_max = 100
 building_complete_hide = 60
 building_complete_duration = 180
-building_paint_surface_bonus = 45
+building_paint_surface_bonus = 35
 
-score_bonus_building_paint = 20
+score_bonus_building_paint = 10
 score_bonus_demolisher_hit = 5
-score_bonus_building_completed = 100
+score_bonus_building_completed = 50
 
-difficulty_building_step = 1
-difficulty_factor_paintsurface = 0.25
-difficulty_factor_demolisher_idletime = 0.35
+difficulty_building_step = 3
+difficulty_factor_paintsurface = 0.5
+difficulty_factor_demolisher_idletime = 0.2
 
 debug_collisions = false
 
@@ -563,7 +563,7 @@ function demolisher_init()
   idle_time = demolisher_idletime_start,
   move_time = demolisher_move_time,
   move_speed = demolisher_move_speed,
-  stun_time = demolisher_stun_time,
+  stun_time = 0,
   stun_speed = demolisher_stun_speed,
   retreat_speed = demolisher_retreat_speed,
  }
@@ -620,7 +620,8 @@ function demolisher_update(d)
 
  elseif state == demolisher_state_stun then
   d.x -= d.stun_speed
-  if state_time >= d.stun_time then
+  d.stun_time -= 1
+  if d.stun_time <= 0 then
    demolisher_idle(d)
   end
 
@@ -704,6 +705,7 @@ end
 
 function demolisher_stun(d)
  d.swing = false
+ d.stun_time += demolisher_stun_time
  demolisher_setstate(d, demolisher_state_stun)
  score += score_bonus_demolisher_hit
 end
@@ -872,7 +874,7 @@ function bucket_shake(b, force)
  while i<nbbullets and b.paint_capacity > 0 do
   b.paint_capacity -= 1
   local x = b.x
-  if (i > 0) x += (i*2 -1) * (2 + rnd()*3)
+  if (i > 0) x += (i*2 -1) * rnd_range(3,6)
   paintbullet_create(x)
   i += 1
  end
