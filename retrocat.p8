@@ -24,8 +24,8 @@ bucket_shake_nbbullets_max = 3
 bucket_paint_capacity_max = 10
 bucket_refill_position = 115
 
-demolisher_xmin = -20
-demolisher_xmax = 20
+demolisher_xmin = -25
+demolisher_xmax = 25
 demolisher_ball_damage = 40
 
 building_life_max = 100
@@ -665,7 +665,7 @@ function bucket_update(b)
  end
 
  if(b.x > bucket_refill_position) b.x = bucket_refill_position
- if(b.x < 20) b.x = 20
+ if(b.x < 4) b.x = 4
 end
 
 function bucket_draw(b)
