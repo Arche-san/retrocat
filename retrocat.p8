@@ -422,7 +422,7 @@ function demolisher_update(d)
  end
 
  --ball pos
- d.ball_x = d.x + 43
+ d.ball_x = d.x + 39
  d.ball_y = d.y - 20 + d.shake_offset
  if d.swing_force > 0 then
   d.ball_x += cos(d.swing_time / 60) * d.swing_force
@@ -471,18 +471,25 @@ end
 function demolisher_draw(d)
  -- base
  local spr_y = d.y -32 + d.shake_offset
- sspr(0, 96, 48, 21, d.x-16, spr_y)
- sspr(0, 117, 48, 1, d.x-16, d.y-12)
- sspr(0, 117, 48, 11, d.x-16, d.y-11)
+ -- base part1
+ sspr(0, 96, 11, 21, d.x-16, spr_y)
+ sspr(0, 117, 11, 1, d.x-16, d.y-12)
+ sspr(0, 117, 11, 11, d.x-16, d.y-11)
+ -- base part2
+ sspr(103, 32, 25, 21, d.x-16+11, spr_y+3)
+ sspr(103, 53, 25, 1, d.x-16+11, d.y-12+3)
+ sspr(103, 53, 25, 11, d.x-16+11, d.y-11+3)
+ --sspr(0, 117, 48, 1, d.x-16, d.y-12)
+ --sspr(0, 117, 48, 11, d.x-16, d.y-11)
 
  -- arm
- local arm_x = d.x + 15
- local arm_y = d.y - 33 + d.shake_offset
+ local arm_x = d.x + 11
+ local arm_y = d.y - 31 + d.shake_offset
  demolisher_draw_arm(arm_x, arm_y)
 
  -- cannon line
- local ball_line_x = d.x + 43
- local ball_line_y = d.y - 53 + d.shake_offset
+ local ball_line_x = d.x + 39
+ local ball_line_y = d.y - 51 + d.shake_offset
  line(ball_line_x, ball_line_y, d.ball_x, d.ball_y, 0)
 
   -- cannon ball
