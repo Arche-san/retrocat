@@ -23,21 +23,33 @@ bucket_push_time = 15
 bucket_shake_time = 15
 bucket_shake_nbbullets_min = 1
 bucket_shake_nbbullets_max = 3
-bucket_paint_capacity_max = 10
+bucket_paint_capacity_max = 5
 bucket_refill_position = 115
+bucket_refill_period = 30
+bucket_refill_value = 1
 
 demolisher_xmin = -50
 demolisher_xmax = 25
 demolisher_ball_damage = 40
+demolisher_idletime_start = 600
+demolisher_stun_time = 30
+demolisher_stun_speed = 0.5
+demolisher_move_time = 30
+demolisher_move_speed = 0.5
+demolisher_retreat_speed = 0.5
 
 building_life_max = 100
 building_complete_hide = 60
 building_complete_duration = 180
-paint_surface_bonus = 0.2
+building_paint_surface_bonus = 0.2
 
 score_bonus_building_paint = 20
 score_bonus_demolisher_hit = 5
 score_bonus_building_completed = 100
+
+difficulty_building_step = 1
+difficulty_factor_paintsurface = 0.25
+difficulty_factor_demolisher_idletime = 0.1
 
 debug_collisions = false
 
@@ -47,6 +59,7 @@ tuto_active = true
 score = 0
 nb_building_completed = 0
 particles = {}
+gameover = false
 
 function _init()
  building = building_init(1)
@@ -86,6 +99,7 @@ function _draw()
  --print("mem=".. stat(0), 0, 120)
  --print("nb part="..#particles, 0, 120)
  if(tuto_active) scene_tuto(1)
+ if(gameover) print("gameover", 48, 64, 8)
 end
 
 -- print outline
@@ -422,6 +436,10 @@ end
 function building_hit(b, damage)
  if(b.completed) return
  b.life -= damage
+ if b.life <= 0 then
+  b.life = 0
+  gameover = true
+ end
 end
 
 function building_paint(b, surface)
@@ -441,6 +459,10 @@ function building_complete(b)
  b.completed_timer = 0
  score += score_bonus_building_completed
  nb_building_completed += 1
+ if nb_building_completed % difficulty_building_step == 0 then
+  demolisher.idle_time -= demolisher.idle_time * difficulty_factor_demolisher_idletime
+  building_paint_surface_bonus -= building_paint_surface_bonus * difficulty_factor_paintsurface
+ end
  demolisher_retreat(demolisher)
 end
 
@@ -515,12 +537,12 @@ function demolisher_init()
   swing_force = 0,
   ball_x = demolisher_xmin + 39,
   ball_y = ground_y - 20,
-  idle_time = 300,
-  move_time = 30,
-  move_speed = 0.5,
-  stun_time = 30,
-  stun_speed = 0.5,
-  retreat_speed = 0.5,
+  idle_time = demolisher_idletime_start,
+  move_time = demolisher_move_time,
+  move_speed = demolisher_move_speed,
+  stun_time = demolisher_stun_time,
+  stun_speed = demolisher_stun_speed,
+  retreat_speed = demolisher_retreat_speed,
  }
 end
 
@@ -779,8 +801,8 @@ function bucket_update(b)
  if b.refilling then
   b.refill_timer -= 1
   if b.refill_timer <= 0 then
-   bucket_addpaint(bucket, 1)
-   b.refill_timer = 60
+   bucket_addpaint(bucket, bucket_refill_value)
+   b.refill_timer = bucket_refill_period
   end
  end
 
@@ -839,7 +861,7 @@ end
 function bucket_refill_start(b)
  if(b.refilling) return
  b.refilling = true
- b.refill_timer = 60
+ b.refill_timer = bucket_refill_period
 end
 
 function bucket_refill_stop(b)
@@ -873,7 +895,7 @@ function paintbullet_update(p)
  if collide_with_building(p.x, p.y) then
   if p.y >= building.paint_surface_y then
    add_splash(p.x,p.y)
-   building_paint(building, paint_surface_bonus)
+   building_paint(building, building_paint_surface_bonus)
    paintbullet_destroy(p)
   end
  elseif collide_with_demolisher(demolisher, p.x, p.y) then
