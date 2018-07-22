@@ -361,8 +361,14 @@ function building_draw(b)
  local height = yend - ystart
  local completed_ystart = yend - (height) * b.paint_surface
  local completed_height = yend - completed_ystart
- building_draw_part(b.spr_x, ystart, b.spr_w, height, b.x, ground_y-height, false)
- building_draw_part(b.spr_x, completed_ystart, b.spr_w, completed_height, b.x, ground_y-completed_height, true)
+ if b.completed then
+  building_draw_part(b.spr_x, ystart, b.spr_w, height, b.x, ground_y-height, true)
+ else
+  if b.paint_surface > 0 then
+   rectfill(b.x, b.paint_surface_y, b.x + b.spr_w, ground_y, 8)
+  end
+  building_draw_part(b.spr_x, ystart, b.spr_w, height, b.x, ground_y-height, false)
+ end
 
  -- gauge
  local gauge_min = 75
