@@ -10,11 +10,13 @@ rock_push_force = 0.5
 rock_push_time = 15
 rock_damage = 10
 
+cat_charge_full_duration = 30
 cat_push_range = 10
-cat_hpush_freeze = 32
-cat_vpush_freeze = 32
+cat_hpush_freeze = 24
+cat_vpush_freeze = 24
 
-bucket_push_force = 1.5
+bucket_push_force_min = 1
+bucket_push_force_max = 2
 bucket_push_time = 15
 bucket_shake_time = 15
 bucket_paint_capacity_max = 10
@@ -78,13 +80,20 @@ function cat_init()
   anims = {
    idle = {5},
    walk = {7,9,11,13},
-   push = {32,34,36,38,40},
+   push_charge = {32},
+   push_release = {34,36,38,40},
   },
   anim_name = "idle",
   anim_index = 1,
   anim_frame = 0,
   push_type = 0,
-  push_countdown = 1
+  push_countdown = 1,
+  charging = false,
+  charge_type = 0,
+  charge_ratio = 0,
+  charge_timer = 0,
+  charge_blink = false,
+  charge_blink_timer = 0,
  }
 end
 
@@ -92,32 +101,70 @@ function cat_update(c)
 	c.freeze -= 1
  if c.freeze <= 0 then
   -- move
-  if btn(1) then
-   c.x += 0.5
-   c.spr_flip = false
-   cat_setanim(c, "walk")
-  elseif btn(0) then
-   c.x -= 0.5
-   c.spr_flip = true
-   cat_setanim(c, "walk")
-  else 
-   cat_setanim(c, "idle")
+  if not c.charging then
+   if btn(1) then
+    c.x += 0.5
+    c.spr_flip = false
+    cat_setanim(c, "walk")
+   elseif btn(0) then
+    c.x -= 0.5
+    c.spr_flip = true
+    cat_setanim(c, "walk")
+   else 
+    cat_setanim(c, "idle")
+   end
   end
 
   -- hpush
-  if btnp(5) then
-   cat_setanim(c, "push")
-   c.push_type = 1
-   c.push_countdown = 16
-   c.freeze = cat_hpush_freeze
-  end
+  if c.charging then
+   if c.charge_timer < cat_charge_full_duration then
+    c.charge_timer += 1
+    if c.charge_timer >= cat_charge_full_duration then
+     c.charge_ratio = 1
+     c.charge_blink = true
+     c.charge_blink_timer = 0
+    end
+   end
 
-  -- vpush
-  if btnp(4) then
-   cat_setanim(c, "push")
-   c.push_type = 2
-   c.push_countdown = 16
-   c.freeze = cat_vpush_freeze
+   if c.charge_type == 1 and not btn(5) then
+    cat_setanim(c, "push_release")
+    c.push_type = 1
+    c.push_countdown = 16
+    c.freeze = cat_hpush_freeze   
+    c.charging = false
+   end
+
+   if c.charge_type == 2 and not btn(4) then
+    cat_setanim(c, "push_release")
+    c.push_type = 2
+    c.push_countdown = 16
+    c.freeze = cat_vpush_freeze
+    c.charging = false
+   end
+  else
+   if btn(5) then
+    cat_setanim(c, "push_charge")
+    c.charge_type = 1
+    c.charge_ratio = 0
+    c.charge_timer = 0
+    c.charging = true
+   end
+
+   if btn(4) then
+    cat_setanim(c, "push_charge")
+    c.charge_type = 2
+    c.charge_ratio = 0
+    c.charge_timer = 0
+    c.charging = true
+   end
+  end
+ end
+
+ -- charge blink
+ if c.charge_blink then
+  c.charge_blink_timer += 1
+  if c.charge_blink_timer >= 20 then
+   c.charge_blink = false
   end
  end
 
@@ -158,7 +205,7 @@ function cat_applypush(c)
   if rock != nil then
    rock_push(rock, push_dir)
   elseif is_cat_near_bucket() then
-   bucket_push(bucket, push_dir)
+   bucket_push(bucket, push_dir, c.charge_ratio)
   end
  elseif c.push_type == 2 then
   local rock = rocks_getclosest(c.x, cat_push_range)
@@ -171,13 +218,18 @@ function cat_applypush(c)
 end
 
 function cat_draw(c)
- if c.anim_name == "push" and c.push_type == 2 then
+ if c.anim_name == "push_release" and c.push_type == 2 then
   pal(6,8)
+ end
+
+ if c.charge_blink then
+  pal(1,8)
  end
 
  local anim = c.anims[c.anim_name]
  spr(anim[c.anim_index], c.x - 8, c.y - 16, 2, 2, c.spr_flip)
 
+ pal(1,1)
  pal(6,6)
 end
 
@@ -543,7 +595,8 @@ function bucket_init()
   x = 85,
   state = 0,
   state_time = 0,
-  paint_capacity = bucket_paint_capacity_max
+  paint_capacity = bucket_paint_capacity_max,
+  push_force,
  }
 end
 
@@ -553,7 +606,7 @@ function bucket_update(b)
  b.state_time += 1
 
  if state == bucket_state_push then
-  b.x += b.push_dir * bucket_push_force
+  b.x += b.push_dir * b.push_force
   if(b.state_time >= bucket_push_time) b.state = 0
  elseif state == bucket_state_push then
   if(b.state_time >= bucket_shake_time) b.state = 0
@@ -575,8 +628,9 @@ function bucket_draw(b)
  spr(42, b.x-4, scaffolding_y-16, 1, 2)
 end
 
-function bucket_push(b, dir)
+function bucket_push(b, dir, force_ratio)
  b.push_dir = dir
+ b.push_force = bucket_push_force_min + (bucket_push_force_max - bucket_push_force_min) * force_ratio
  b.state = bucket_state_push
  b.state_time = 0
 end
