@@ -19,6 +19,8 @@ bucket_push_force_min = 1
 bucket_push_force_max = 2
 bucket_push_time = 15
 bucket_shake_time = 15
+bucket_shake_nbbullets_min = 1
+bucket_shake_nbbullets_max = 3
 bucket_paint_capacity_max = 10
 bucket_refill_position = 115
 
@@ -212,7 +214,7 @@ function cat_applypush(c)
   if rock != nil then
    rock_fall(rock)
   elseif is_cat_near_bucket() then
-   bucket_shake(bucket)
+   bucket_shake(bucket, c.charge_ratio)
   end
  end
 end
@@ -635,10 +637,16 @@ function bucket_push(b, dir, force_ratio)
  b.state_time = 0
 end
 
-function bucket_shake(b)
- if b.paint_capacity > 0 then
+function bucket_shake(b, force)
+ local nbbullets = bucket_shake_nbbullets_min + flr((bucket_shake_nbbullets_max - bucket_shake_nbbullets_min) * force)
+ 
+ local i=0
+ while i<nbbullets and b.paint_capacity > 0 do
   b.paint_capacity -= 1
-  paintbullet_create(b.x)
+  local x = b.x
+  if (i > 0) x += (i*2 -1) * (2 + rnd()*3)
+  paintbullet_create(x)
+  i += 1
  end
 
  b.state = bucket_state_shake
