@@ -68,10 +68,6 @@ end
 function _draw()
  palt(0, false)
  palt(11, true)
- if tuto_active then
-  scene_tuto(1)
-  return
- end
  bg_draw()
  building_draw(building)
  demolisher_draw(demolisher)
@@ -85,6 +81,7 @@ function _draw()
  --print("cpu=".. stat(1), 0, 112)
  --print("mem=".. stat(0), 0, 120)
  --print("nb part="..#particles, 0, 120)
+ if(tuto_active) scene_tuto(1)
 end
 
 -- print outline
@@ -1020,6 +1017,7 @@ local tra = 0
 function scene_tuto(lang)
  --globals
  if(tra > 0) tra -= 2
+ if tuto_page <= 2 then
  cls(1)
  ctxt(txts[1][lang],64,2,8)
  rect(14,21,113,60,7)
@@ -1029,6 +1027,8 @@ function scene_tuto(lang)
  print(txts[9][lang],80+next_x/12,121)
  next_x += 1
  if(next_x > 36) next_x = 0
+ end
+
  --page 1
  if(tuto_page == 0) then
   ctxt(txts[2][lang],60,15,7)
@@ -1063,7 +1063,7 @@ function scene_tuto(lang)
   circfill(30,90,3,8)
   print("<<",90,95,1)
  --page 3
- else
+ elseif(tuto_page == 2) then
   ctxt(txts[8][lang],64,15,7)
   ctxt(txts[7][lang],64,71,7)
   for x=0,11 do spr(43,16+x*8,49) end
@@ -1082,7 +1082,7 @@ function scene_tuto(lang)
  end
  if(not btn(5)) key_n = false
  if(tra == 32) tuto_page += 1
- if(tra == 32 and tuto_page > 2) tuto_active = false
+ if(tra == 0 and tuto_page > 2) tuto_active = false
  if(tra != 0) scene_transition()
 end
 
