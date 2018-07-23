@@ -57,7 +57,7 @@ difficulty_factor_demolisher_idletime = 0.2
 
 debug_collisions = false
 
-title_active = false
+title_active = true
 tuto_active = false
 
 -- global vars
@@ -1297,6 +1297,7 @@ function scene_tuto(lang)
     tra == 0) then
   key_n = true
   tra = 64
+  game_sfx(14)
  end
  if(not btn(5)) key_n = false
  if(tra == 32) tuto_page += 1
@@ -1389,6 +1390,7 @@ function scene_title()
     title_start == 0) then
   key_n = true
   title_start = 80
+  game_sfx(14)
   if(btn(5)) lang = 1
   if(btn(4)) lang = 2
  end
