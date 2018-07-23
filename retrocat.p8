@@ -470,7 +470,7 @@ function building_draw(b)
  local completed_ystart = yend - (height) * b.paint_surface_ratio
  local completed_height = yend - completed_ystart
  if b.completed then
-  building_draw_part(b.spr_x, ystart+1, b.spr_w, b.height, b.x, ground_y-b.height,1)
+  building_draw_part(b.spr_x, ystart, b.spr_w, b.height, b.x, ground_y-b.height,1)
  else
   if b.paint_surface_ratio > 0 and
      not gameover then
