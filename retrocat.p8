@@ -77,6 +77,15 @@ scr = {
  shake_time = 0
 }
 
+function reset_game()
+ gameover = false
+ score = 0
+ nb_building_completed = 0
+ particles = {}
+ gr_paint = {}
+ _init()
+end
+
 function _init()
  building = building_init(builing_type_start)
  cat = cat_init()
@@ -88,10 +97,6 @@ end
 
 local key = false
 function _update60()
- if(not key and btn(4) or btn(5)) then
-  key = true
-  add_explosion(cat.x,cat.y)
- end
  if(not btn(4) and not btn(5)) key=false
 
  if(not tuto_active and
@@ -1439,6 +1444,7 @@ function scene_gameover()
  if(gameover_score_timeout > 0) gameover_score_timeout += 1
  if(gameover_score_timeout > 220) then
   ctxt("score "..num_format(score, 4),64,58,8)
+  if(btnp(4) or btnp(5)) reset_game()
  end 
 end
 
