@@ -83,6 +83,8 @@ function reset_game()
  nb_building_completed = 0
  particles = {}
  gr_paint = {}
+ paintbullets_arr = {}
+ building_paint_surface_bonus = 35
  _init()
 end
 
