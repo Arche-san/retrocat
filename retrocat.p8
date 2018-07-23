@@ -86,8 +86,15 @@ end
 
 local key = false
 function _update60()
- if not tuto_active and
-    not title_active then
+ if(not key and btn(4) or btn(5)) then
+  key = true
+  add_explosion(cat.x,cat.y)
+ end
+ if(not btn(4) and not btn(5)) key=false
+
+ if(not tuto_active and
+    not title_active and
+    not gameover) then
   building_update(building)
   cat_update(cat)
   demolisher_update(demolisher)
@@ -103,15 +110,16 @@ function _draw()
  palt(11, true)
  bg_draw()
  perform_shake()
- building_draw(building)
- demolisher_draw(demolisher)
- painttap_draw(painttap)
- cat_draw(cat)
- bucket_draw(bucket)
- foreach(paintbullets_arr, paintbullet_draw)
- foreach(rocks_arr, rock_draw)
- --foreach(particles, draw_particle)
- print_outline("\x92 "..num_format(score, 4), 100, 122, 7, 1)
+ if(not gameover) then
+  building_draw(building)
+  demolisher_draw(demolisher)
+  painttap_draw(painttap)
+  cat_draw(cat)
+  bucket_draw(bucket)
+  foreach(paintbullets_arr, paintbullet_draw)
+  foreach(rocks_arr, rock_draw)
+  print_outline("\x92 "..num_format(score, 4), 100, 122, 7, 1)
+ end
  --print("cpu=".. stat(1), 0, 112)
  --print("mem=".. stat(0), 0, 120)
  --print("nb part="..#particles, 0, 120)
@@ -351,7 +359,7 @@ function building_init(type)
   b.spr_w = 57
   b.spr_h = 52
   b.paint_surface_max = 100
-  b.damage_multiplier = 1
+  b.damage_multiplier = 10--1
  elseif type == 2 then
   b.x = 80
   b.cx = 0
@@ -362,7 +370,7 @@ function building_init(type)
   b.spr_w = 47
   b.spr_h = 32
   b.paint_surface_max = 70
-  b.damage_multiplier = 2
+  b.damage_multiplier = 10--2
  elseif type == 3 then
   b.cx = 0
   b.cw = 45
@@ -372,7 +380,7 @@ function building_init(type)
   b.spr_w = 51
   b.spr_h = 59
   b.paint_surface_max = 120
-  b.damage_multiplier = 0.8
+  b.damage_multiplier = 10--0.8
  elseif type == 4 then
   b.x = 65
   b.cx = 2
@@ -383,7 +391,7 @@ function building_init(type)
   b.spr_w = 69
   b.spr_h = 44
   b.paint_surface_max = 150
-  b.damage_multiplier = 0.75
+  b.damage_multiplier = 10--0.75
  end
  b.type = type
 
@@ -447,16 +455,19 @@ function building_draw(b)
  local completed_ystart = yend - (height) * b.paint_surface_ratio
  local completed_height = yend - completed_ystart
  if b.completed then
-  building_draw_part(b.spr_x, ystart, b.spr_w, b.height, b.x, ground_y-b.height, true)
+  building_draw_part(b.spr_x, ystart+1, b.spr_w, b.height, b.x, ground_y-b.height,1)
  else
-  if b.paint_surface_ratio > 0 then
+  if b.paint_surface_ratio > 0 and
+     not gameover then
    rectfill(b.x, b.paint_surface_y, b.x + b.spr_w-1, ground_y-1, 8)
   end
-  building_draw_part(b.spr_x, ystart, b.spr_w, b.height, b.x, ground_y-b.height, false)
+  local mode = 0
+  if(gameover) mode = 2
+  building_draw_part(b.spr_x, ystart, b.spr_w, b.height, b.x, ground_y-b.height,mode)
  end
 
  -- gauge
- if not b.completed then
+ if not b.completed and not gameover then
   local gauge_min = b.x + 10
   local gauge_max = b.x + b.spr_w - 10
   local gauge_y = ground_y - b.height - 7
@@ -486,6 +497,10 @@ function building_hit(b, damage)
  if b.life <= 0 then
   b.life = 0
   gameover = true
+  building_blink_frame = 0
+  explosion_frame = 120
+  y_destroy = 0
+  for p in all(particles) do del(particles,p) end
  end
 end
 
@@ -525,7 +540,7 @@ end
 
 --draw building in both states
 --altered / renovated (clean)
-function building_draw_part(x,y,w,h,px,py,clean)
+function building_draw_part(x,y,w,h,px,py,mode)
  --init palette parity
  pal()
  local pair_broken = {
@@ -539,13 +554,23 @@ function building_draw_part(x,y,w,h,px,py,clean)
   {5,6}
  }
  local pair = pair_broken
- if(clean) pair = pair_clean
+ if(mode == 1) pair = pair_clean
  --applying parity
- for pa in all(pair) do
-  pal(pa[1],pa[2])
+ if(mode != 2) then
+	 for pa in all(pair) do
+   pal(pa[1],pa[2])
+ 	end
+ else --if gameover
+  for i=0,15 do
+   if(i != 1 and i != 12) then
+    pal(i,1)
+   else
+    pal(i,7)
+   end
+  end
  end
  --drawing sprite
- if(not clean) then
+ if(mode == 0) then
   palt(15,true)
   palt(9,true)
   palt(4,true)
@@ -666,17 +691,17 @@ function demolisher_draw(d)
  -- base
  local spr_y = d.y -32 + d.shake_offset
  -- base part1
- sspr(0, 106, 11, 11, d.x-16, spr_y+10)
- sspr(0, 117, 11, 1, d.x-16, d.y-12)
+ sspr(0, 106, 11, 11, d.x-16, spr_y+11)
+ sspr(0, 117, 11, 1, d.x-16, d.y-11)
  sspr(0, 117, 11, 11, d.x-16, d.y-11)
  -- base part2
- sspr(103, 32, 25, 21, d.x-16+11, spr_y+3)
- sspr(103, 53, 25, 1, d.x-16+11, d.y-12+3)
- sspr(103, 53, 25, 11, d.x-16+11, d.y-11+3)
+ sspr(103, 32, 25, 19, d.x-16+11, spr_y+4)
+ sspr(103, 50, 25, 1, d.x-16+11, d.y-12+3)
+ sspr(103, 51, 25, 13, d.x-16+11, d.y-13+3)
  --sspr(0, 117, 48, 1, d.x-16, d.y-12)
  --sspr(0, 117, 48, 11, d.x-16, d.y-11)
  --trail
- rectfill(d.x+4,d.y-34+d.shake_offset,d.x+6,d.y-30+d.shake_offset,1)
+ rectfill(d.x+4,d.y-34+d.shake_offset,d.x+6,d.y-29+d.shake_offset,1)
  demolisher_trail_pop += 1
  if(demolisher_trail_pop >= 10) then
   demolisher_trail_pop = 0
@@ -686,7 +711,7 @@ function demolisher_draw(d)
  end
  -- arm
  local arm_x = d.x + 11
- local arm_y = d.y - 31 + d.shake_offset
+ local arm_y = d.y - 30 + d.shake_offset
  demolisher_draw_arm(arm_x, arm_y)
 
  -- cannon line
@@ -1024,7 +1049,7 @@ function painttap_close(p)
  p.opened = false
 end
 
-function add_particle(x,y,vx,vy,r,c,g,gr,f,ra,sp)
+function add_particle(x,y,vx,vy,r,c,g,gr,f,ra,sp,txt)
  local part = {}
  part.x = x
  part.y = y
@@ -1037,6 +1062,8 @@ function add_particle(x,y,vx,vy,r,c,g,gr,f,ra,sp)
  part.frame = f
  part.ratio = ra
  part.sp = sp
+ part.txt = txt
+ part.bounce = 2
  if(ra == nil) part.ratio = 1.025
  if(f == nil) part.frame = 60
  add(particles, part)
@@ -1054,16 +1081,23 @@ function add_splash(x,y)
 end
 
 function draw_particle(p)
- if(p.sp == nil) then
-  circfill(p.x,p.y,p.radius,p.col)
- else
+ if(p.sp != nil) then
   sspr(p.sp.x,p.sp.y,p.sp.w,p.sp.h,p.x,p.y,p.sp.w,p.sp.h)
+ elseif(p.txt != nil) then
+  print(p.txt,p.x,p.y,p.col)
+ else
+  circfill(p.x,p.y,p.radius,p.col)
  end
  p.x += p.vx
  p.y += p.vy
  if(p.ground != nil and
     p.y+p.radius > p.ground) then
   p.y = p.ground - p.radius
+  if(p.bounce > 0 and
+     p.txt != nil) then
+   p.vy = -0.5*p.bounce-rnd(0.25)
+   p.bounce -= 1
+  end
  end
  if(p.gravity != nil and
     p.vy < 2) then
@@ -1071,7 +1105,7 @@ function draw_particle(p)
  end
  p.radius = p.radius / p.ratio
  p.frame -= 1
- if(p.frame <= 0) del(particles,p)
+ if(p.frame <= 0 and p.txt == nil) del(particles,p)
 end
 
 -->8
@@ -1313,8 +1347,53 @@ function scene_title()
  if(not btn(5) and not btn(4)) key_n = false
 end
 
+--gameover scene
+explosion_frame = 0
+y_destroy = 0
+smoke_destroy = 0
 function scene_gameover()
- building_draw(building)
+ cls(1)
+ local b = building
+ building_draw_part(b.spr_x,b.spr_y+y_destroy,b.spr_w,b.spr_h-y_destroy+1,b.x-b.cx,ground_y-b.spr_h+y_destroy,2)
+ if(explosion_frame > 0) explosion_frame-=1
+ if(explosion_frame > 0 and
+    explosion_frame%20 == 0) then
+  add_explosion(b.x+b.cx,b.x-b.cx+b.cw,ground_y-b.spr_h+y_destroy)
+  shake_screen(1,1,10)
+ end
+ if(explosion_frame > 10 and
+    explosion_frame < 100 and
+    (explosion_frame+10)%20 == 0) then
+  y_destroy += b.spr_h/5
+ end
+ smoke_destroy += 1
+ if(explosion_frame == 0 and
+    smoke_destroy >= 20) then
+  smoke_destroy = 0
+  add_particle(b.x+rnd(b.spr_w-6)+3,
+   ground_y-b.spr_h+y_destroy-5,
+   rnd(0.2)-0.1,rnd(0.25)-0.5,
+   rnd(1)+3,6,0,128,40,1.02)
+ end
+ if(explosion_frame == 1) then
+  local letters = {"g","a","m","e","o","v","e","r"}
+  local i = 0
+  for l in all(letters) do
+   add_particle(48+i*4,-50-i*15,0,0,
+    1,7,0.05,50,-1,1,nil,l)
+   i += 1
+  end
+-- r,c,g,gr,f,ra,sp,txt)
+ end
+end
+
+function add_explosion(x0,x1,y)
+ while x0 < x1 do
+	 add_particle(x0+rnd(3)-1.5,
+   y+rnd(3)-1.5,0,0,rnd(2)+2,
+   8,0,128,9+rnd(3),0.9)
+  x0 += 6
+ end
 end
 
 function scene_transition()
