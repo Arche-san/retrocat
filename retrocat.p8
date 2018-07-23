@@ -64,6 +64,7 @@ tuto_active = false
 score = 0
 nb_building_completed = 0
 particles = {}
+gr_paint = {}
 gameover = false
 lang = 1
 
@@ -127,6 +128,8 @@ function _draw()
  if(tuto_active) scene_tuto(lang)
  if(gameover) scene_gameover() --print("gameover", 48, 64, 8)
  if(tra == 0) foreach(particles, draw_particle)
+ foreach(gr_paint, draw_ground_paint)
+ draw_flash()
 end
 
 -- print outline
@@ -359,7 +362,7 @@ function building_init(type)
   b.spr_w = 57
   b.spr_h = 52
   b.paint_surface_max = 100
-  b.damage_multiplier = 10--1
+  b.damage_multiplier = 1
  elseif type == 2 then
   b.x = 80
   b.cx = 0
@@ -370,7 +373,7 @@ function building_init(type)
   b.spr_w = 47
   b.spr_h = 32
   b.paint_surface_max = 70
-  b.damage_multiplier = 10--2
+  b.damage_multiplier = 2
  elseif type == 3 then
   b.cx = 0
   b.cw = 45
@@ -380,7 +383,7 @@ function building_init(type)
   b.spr_w = 51
   b.spr_h = 59
   b.paint_surface_max = 120
-  b.damage_multiplier = 10--0.8
+  b.damage_multiplier = 0.8
  elseif type == 4 then
   b.x = 65
   b.cx = 2
@@ -391,7 +394,7 @@ function building_init(type)
   b.spr_w = 69
   b.spr_h = 44
   b.paint_surface_max = 150
-  b.damage_multiplier = 10--0.75
+  b.damage_multiplier = 0.75
  end
  b.type = type
 
@@ -499,6 +502,7 @@ function building_hit(b, damage)
   gameover = true
   building_blink_frame = 0
   explosion_frame = 120
+  gameover_score_timeout = 0
   y_destroy = 0
   for p in all(particles) do del(particles,p) end
  end
@@ -522,6 +526,8 @@ function building_complete(b)
  b.completed_timer = 0
  score += score_bonus_building_completed
  nb_building_completed += 1
+ flash_screen()
+ shake_screen(3,3,11)
  if nb_building_completed % difficulty_building_step == 0 then
   demolisher.idle_time -= demolisher.idle_time * difficulty_factor_demolisher_idletime
   building_paint_surface_bonus -= building_paint_surface_bonus * difficulty_factor_paintsurface
@@ -584,7 +590,6 @@ function building_draw_part(x,y,w,h,px,py,mode)
  palt(0, false)
  palt(11, true)
 end
-
 -->8
 -- demolisher
 demolisher_state_idle = 1
@@ -1093,6 +1098,10 @@ function draw_particle(p)
  if(p.ground != nil and
     p.y+p.radius > p.ground) then
   p.y = p.ground - p.radius
+  if(p.col == 8 and p.sp == nil and
+     p.txt == nil) then
+   add_ground_paint(p.x,p.ground)
+  end
   if(p.bounce > 0 and
      p.txt != nil) then
    p.vy = -0.5*p.bounce-rnd(0.25)
@@ -1106,6 +1115,31 @@ function draw_particle(p)
  p.radius = p.radius / p.ratio
  p.frame -= 1
  if(p.frame <= 0 and p.txt == nil) del(particles,p)
+end
+
+function add_ground_paint(x,y)
+ for pa in all(gr_paint) do
+  if(flr(pa.x) == flr(x)) then
+   if(abs(pa.y0 - pa.y1) < pa.maxy and
+      flr(rnd(8)) == 1) then
+    pa.y1 += 1
+   end
+   return
+  end
+ end
+ if(flr(rnd(8)) == 1) then
+  local paint = {}
+  paint.x = x
+  paint.y0 = y
+  paint.y1 = y
+  paint.c = 8
+  paint.maxy = rnd(4)+2
+  add(gr_paint,paint)
+ end
+end
+
+function draw_ground_paint(pa)
+ line(pa.x,pa.y0,pa.x,pa.y1,pa.c)
 end
 
 -->8
@@ -1351,6 +1385,7 @@ end
 explosion_frame = 0
 y_destroy = 0
 smoke_destroy = 0
+gameover_score_timeout = 0
 function scene_gameover()
  cls(1)
  local b = building
@@ -1383,8 +1418,12 @@ function scene_gameover()
     1,7,0.05,50,-1,1,nil,l)
    i += 1
   end
--- r,c,g,gr,f,ra,sp,txt)
+  gameover_score_timeout = 1
  end
+ if(gameover_score_timeout > 0) gameover_score_timeout += 1
+ if(gameover_score_timeout > 220) then
+  ctxt("score "..num_format(score, 4),64,58,8)
+ end 
 end
 
 function add_explosion(x0,x1,y)
@@ -1425,6 +1464,22 @@ function perform_shake()
 	camera(scr.x,scr.y)
 end
 
+flash_frame = 0
+function flash_screen()
+ flash_frame = 8
+end
+
+function draw_flash()
+ if(flash_frame > 0) then
+  local c = 7
+  if(flash_frame < 2 or
+     flash_frame > 6) then
+   c = 6
+  end
+  rectfill(-5,-5,133,133,c)
+  flash_frame -= 1
+ end
+end
 __gfx__
 bb1bbbbb17777711bbbbbbb11111bbbbbbb1111bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 bbb11bbb77111771bbbbb111177711bbbb116161bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
