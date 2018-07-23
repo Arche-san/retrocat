@@ -52,7 +52,7 @@ score_bonus_demolisher_hit = 5
 score_bonus_building_completed = 50
 
 difficulty_building_step = 3
-difficulty_factor_paintsurface = 0.5
+difficulty_factor_paintsurface = 0.35
 difficulty_factor_demolisher_idletime = 0.2
 
 debug_collisions = false
@@ -1224,7 +1224,8 @@ txts = {
  {"use tap to fill bucket",
   "le robinet remplit le pot"},
  {" ❎ next >>","❎ suite >>"},
- {"repair","repare"} 
+ {"repair","repare"},
+ {"❎ restart","❎ recommencer"}
 }
 
 --center text
@@ -1296,7 +1297,7 @@ function scene_tuto(lang)
   spr(46,96,19,2,2)  
   spr(42,94,33,1,2,2)
   rectfill(97,34,99,41,8)
-  building_draw_part(0,32,54,25,50,90)
+  building_draw_part(0,32,54,25,50,90,0)
   circfill(72,90,3,8)
   print(txts[10][lang],39,88,8)
  end
@@ -1395,7 +1396,8 @@ function scene_title()
  --start
  if((btn(5) or btn(4)) and 
     not key_n and
-    title_start == 0) then
+    title_start == 0 and
+    tra == 0) then
   key_n = true
   title_start = 80
   game_sfx(14)
@@ -1447,6 +1449,7 @@ function scene_gameover()
  if(gameover_score_timeout > 0) gameover_score_timeout += 1
  if(gameover_score_timeout > 220) then
   ctxt("score "..num_format(score, 4),64,58,8)
+  print(txts[11][lang],3,121,7)
   if(btnp(4) or btnp(5)) reset_game()
  end 
 end
