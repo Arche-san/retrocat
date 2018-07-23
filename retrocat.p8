@@ -526,7 +526,6 @@ function building_hit(b, damage)
 end
 
 function building_paint(b, surface)
- game_sfx(19)
  b.paint_surface += surface
  if b.paint_surface >= b.paint_surface_max then
   b.paint_surface = b.paint_surface_max
@@ -535,6 +534,7 @@ function building_paint(b, surface)
   end
  else
   score += score_bonus_building_paint
+  game_sfx(19)
  end
  b.paint_surface_ratio = b.paint_surface / b.paint_surface_max
 end
