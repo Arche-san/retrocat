@@ -315,6 +315,7 @@ function cat_applypush(c)
    bucket_push(bucket, push_dir, c.charge_ratio)
   end
  elseif c.push_type == 2 then
+  game_sfx(16)
   local rock = rocks_getclosest(c.x, cat_push_range)
   if rock != nil then
    rock_fall(rock)
