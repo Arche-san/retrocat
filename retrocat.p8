@@ -13,7 +13,7 @@ rock_push_time = 15
 rock_damage = 10
 
 cat_move_speed = 0.65
-cat_charge_full_duration = 12
+cat_charge_full_duration = 15
 cat_push_range = 10
 cat_hpush_freeze = 12
 cat_vpush_freeze = 12
@@ -30,13 +30,14 @@ bucket_refill_period = 8
 bucket_refill_value = 1
 
 demolisher_xmin = -30
-demolisher_xmax = 20
-demolisher_ball_damage = 35
-demolisher_idletime_start = 120
+demolisher_xmax = 25
+demolisher_ball_damage = 50
+demolisher_idletime_start = 180
 demolisher_stun_time = 30
 demolisher_stun_speed = 0.5
 demolisher_move_time = 30
 demolisher_move_speed = 0.5
+demolisher_retreat_xmin = 0
 demolisher_retreat_speed = 0.5
 demolisher_trail_pop = 0
 
@@ -44,7 +45,7 @@ builing_type_start = 1
 building_life_max = 100
 building_complete_hide = 60
 building_complete_duration = 180
-building_paint_surface_bonus = 35
+building_paint_surface_bonus = 15
 building_blink_frame = 0
 
 score_bonus_building_paint = 10
@@ -52,12 +53,12 @@ score_bonus_demolisher_hit = 5
 score_bonus_building_completed = 50
 
 difficulty_building_step = 3
-difficulty_factor_paintsurface = 0.35
-difficulty_factor_demolisher_idletime = 0.2
+difficulty_factor_paintsurface = 0.6
+difficulty_factor_demolisher_idletime = 0.1
 
 debug_collisions = false
 
-title_active = true
+title_active = false
 tuto_active = false
 
 -- global vars
@@ -390,6 +391,7 @@ function building_init(type)
   b.paint_surface_max = 70
   b.damage_multiplier = 2
  elseif type == 3 then
+  b.x = 80
   b.cx = 0
   b.cw = 45
   b.ch = 59
@@ -398,10 +400,10 @@ function building_init(type)
   b.spr_w = 51
   b.spr_h = 59
   b.paint_surface_max = 120
-  b.damage_multiplier = 0.8
+  b.damage_multiplier = 1
  elseif type == 4 then
   b.x = 65
-  b.cx = 2
+  b.cx = 7
   b.cw = 57
   b.ch = 48
   b.spr_x = 11
@@ -409,7 +411,7 @@ function building_init(type)
   b.spr_w = 69
   b.spr_h = 44
   b.paint_surface_max = 150
-  b.damage_multiplier = 0.75
+  b.damage_multiplier = 0.7
  end
  b.type = type
 
@@ -701,8 +703,10 @@ function demolisher_update(d)
   end
 
  elseif state == demolisher_state_retreat then
-  d.x -= d.retreat_speed
-  if (d.x <= demolisher_xmin) and (not building.completed) then
+  if d.x > demolisher_retreat_xmin then
+   d.x -= d.retreat_speed
+  end
+  if (d.x <= demolisher_retreat_xmin) and (not building.completed) then
    demolisher_idle(d)
   end
  end
@@ -889,7 +893,7 @@ bucket_state_push = 1
 bucket_state_shake = 2
 function bucket_init()
  return {
-  x = 85,
+  x = 95,
   state = 0,
   state_time = 0,
   paint_capacity = bucket_paint_capacity_max,
@@ -1007,6 +1011,7 @@ function paintbullet_update(p)
    paintbullet_destroy(p)
   end
  elseif collide_with_demolisher(demolisher, p.x, p.y) then
+  add_splash(p.x,p.y)
   demolisher_stun(demolisher)
   paintbullet_destroy(p)
  elseif p.y >= ground_y then
