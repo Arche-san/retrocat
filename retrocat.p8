@@ -33,6 +33,7 @@ demolisher_xmin = -30
 demolisher_xmax = 25
 demolisher_ball_damage = 50
 demolisher_idletime_start = 180
+demolisher_idletime_min = 10
 demolisher_stun_time = 30
 demolisher_stun_speed = 0.5
 demolisher_move_time = 30
@@ -53,9 +54,9 @@ score_bonus_building_paint = 10
 score_bonus_demolisher_hit = 5
 score_bonus_building_completed = 50
 
-difficulty_building_step = 3
-difficulty_factor_paintsurface = 0.3
-difficulty_factor_demolisher_idletime = 0.4
+difficulty_building_step = 1
+difficulty_factor_paintsurface = 0.1
+difficulty_factor_demolisher_idletime = 0.13
 
 debug_collisions = false
 
@@ -134,6 +135,7 @@ function _draw()
  --print("cpu=".. stat(1), 0, 112)
  --print("mem=".. stat(0), 0, 120)
  --print("nb part="..#particles, 0, 120)
+ --print("idletime=".. demolisher.idle_time, 0, 120, 8)
  if(title_active) scene_title()
  if(tuto_active) scene_tuto(lang)
  if(gameover) scene_gameover() --print("gameover", 48, 64, 8)
@@ -552,7 +554,8 @@ function building_complete(b)
  flash_screen()
  shake_screen(3,3,11)
  if nb_building_completed % difficulty_building_step == 0 then
-  demolisher.idle_time -= demolisher.idle_time * difficulty_factor_demolisher_idletime
+  demolisher.idle_time -= flr(demolisher.idle_time * difficulty_factor_demolisher_idletime)
+  demolisher.idle_time = max(demolisher.idle_time, demolisher_idletime_min)
   building_paint_surface_bonus -= building_paint_surface_bonus * difficulty_factor_paintsurface
   building_paint_surface_bonus = max(building_paint_surface_bonus, building_paint_surface_bonus_min)
  end
