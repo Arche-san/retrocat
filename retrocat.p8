@@ -25,7 +25,7 @@ bucket_shake_time = 15
 bucket_shake_nbbullets_min = 1
 bucket_shake_nbbullets_max = 3
 bucket_paint_capacity_max = 10
-bucket_refill_position = 115
+bucket_refill_position = 14
 bucket_refill_period = 8
 bucket_refill_value = 1
 
@@ -45,7 +45,7 @@ builing_type_start = 1
 building_life_max = 100
 building_complete_hide = 60
 building_complete_duration = 180
-building_paint_surface_bonus = 15
+building_paint_surface_bonus = 25
 building_blink_frame = 0
 
 score_bonus_building_paint = 10
@@ -53,8 +53,8 @@ score_bonus_demolisher_hit = 5
 score_bonus_building_completed = 50
 
 difficulty_building_step = 3
-difficulty_factor_paintsurface = 0.6
-difficulty_factor_demolisher_idletime = 0.1
+difficulty_factor_paintsurface = 0.3
+difficulty_factor_demolisher_idletime = 0.2
 
 debug_collisions = false
 
@@ -85,7 +85,7 @@ function reset_game()
  particles = {}
  gr_paint = {}
  paintbullets_arr = {}
- building_paint_surface_bonus = 35
+ building_paint_surface_bonus = 25
  _init()
 end
 
@@ -929,8 +929,8 @@ function bucket_update(b)
   if(b.state_time >= bucket_shake_time) b.state = 0
  end
 
- if(b.x > bucket_refill_position) b.x = bucket_refill_position
- if(b.x < 4) b.x = 4
+ if(b.x < bucket_refill_position) b.x = bucket_refill_position
+ if(b.x > 124) b.x = 124
 end
 
 function bucket_draw(b)
@@ -987,7 +987,7 @@ function bucket_addpaint(b, value)
 end
 
 function is_bucket_in_refill_position()
- return bucket.x >= bucket_refill_position
+ return bucket.x <= bucket_refill_position
 end
 
 -- paint bullet
@@ -1030,7 +1030,7 @@ end
 -- paint tap
 function painttap_init()
  return {
-  x = 128,
+  x = 0,
   y = -3,
   opened = false,
  }
@@ -1046,10 +1046,10 @@ end
 
 function painttap_draw(p)
  if p.opened then
-  rectfill(p.x-15, p.y+15, p.x-13, p.y+25,8)
+  rectfill(p.x+12, p.y+13, p.x+14, p.y+25,8)
   if(bucket.paint_capacity ==
      bucket_paint_capacity_max) then
-   add_particle(p.x-15,p.y+25,
+   add_particle(p.x+13,p.y+25,
    rnd(0.6)-0.3,rnd(0.2)-0.6,
    1,8,0.1,30,20,1)
   end
@@ -1065,7 +1065,7 @@ function painttap_draw(p)
   end
   rectfill(trigger_xmin, trigger_ymin, trigger_xmax, trigger_ymax, 8)
   rect(trigger_xmin-1, trigger_ymin, trigger_xmax+1, trigger_ymax -1, 1)
-  spr(46, p.x-16, p.y, 2, 2)
+  spr(46, p.x, p.y, 2, 2, true)
 end
 
 function painttap_open(p)
