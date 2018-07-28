@@ -46,6 +46,7 @@ building_life_max = 100
 building_complete_hide = 60
 building_complete_duration = 180
 building_paint_surface_bonus = 25
+building_paint_surface_bonus_min = 10
 building_blink_frame = 0
 
 score_bonus_building_paint = 10
@@ -54,7 +55,7 @@ score_bonus_building_completed = 50
 
 difficulty_building_step = 3
 difficulty_factor_paintsurface = 0.3
-difficulty_factor_demolisher_idletime = 0.2
+difficulty_factor_demolisher_idletime = 0.4
 
 debug_collisions = false
 
@@ -553,6 +554,7 @@ function building_complete(b)
  if nb_building_completed % difficulty_building_step == 0 then
   demolisher.idle_time -= demolisher.idle_time * difficulty_factor_demolisher_idletime
   building_paint_surface_bonus -= building_paint_surface_bonus * difficulty_factor_paintsurface
+  building_paint_surface_bonus = max(building_paint_surface_bonus, building_paint_surface_bonus_min)
  end
  demolisher_retreat(demolisher)
 end
@@ -893,7 +895,7 @@ bucket_state_push = 1
 bucket_state_shake = 2
 function bucket_init()
  return {
-  x = 95,
+  x = 45,
   state = 0,
   state_time = 0,
   paint_capacity = bucket_paint_capacity_max,
