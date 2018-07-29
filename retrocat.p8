@@ -60,7 +60,7 @@ difficulty_factor_demolisher_idletime = 0.13
 
 debug_collisions = false
 
-title_active = false
+title_active = true
 tuto_active = false
 
 -- global vars
